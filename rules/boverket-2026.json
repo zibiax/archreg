@@ -1,0 +1,249 @@
+{
+  "id": "boverket-2026",
+  "name": "Boverkets byggregler i kraft november 2026 (BFS 2024:6–13, BFS 2026:4, BFS 2026:9)",
+  "version": "2026.11.17",
+  "notes": "Requirements quoted from the official BFS PDFs at rinfo.boverket.se, fetched 2026-11-17. Includes BFS 2025:10 (amends BFS 2024:7, in force 2025-12-01; the amended paragraphs don't affect the rules here), BFS 2026:4 hållbar mobilitet (in force 2026-07-01) and BFS 2026:9 energihushållning (in force 2026-10-01, repeals BBR). Building 'use' values: house (en- och tvåbostadshus), apartments (flerbostadshus), nonResidential (lokalbyggnad).",
+  "rules": [
+    {
+      "id": "bfs2024-11.hygiene.room",
+      "title": "Dwelling has a room for personal hygiene",
+      "appliesTo": "building",
+      "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
+      "check": { "property": "bathroomCount", "op": ">=", "value": 1 },
+      "text": "I bostaden ska finnas rum för personhygien.",
+      "source": { "title": "BFS 2024:11 Bostäders lämplighet för sitt ändamål", "section": "2 kap. 3 §", "url": "https://rinfo.boverket.se/BFS2024-11/pdf/BFS2024-11.pdf" },
+      "verified": true,
+      "notes": "Checked for the whole model. In a multi-dwelling model each dwelling needs its own (or shared per 2 kap. 8 §)."
+    },
+    {
+      "id": "bfs2024-12.bathroom.turning",
+      "title": "Accessible bathroom: room for a 1.30 m turning circle",
+      "appliesTo": "room",
+      "where": { "type": ["bathroom"] },
+      "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
+      "quantifier": "any",
+      "necessary": true,
+      "check": { "property": "minDimension", "op": ">=", "value": 1.30, "unit": "m" },
+      "text": "Minst ett rum för personhygien i en bostad ska vara tillgängligt och användbart för en person med nedsatt rörelseförmåga. […] I enskilda bostäder är dock följande mått dimensionerande […] 2. vändmåttet av en cirkel med diametern 1,30 meter",
+      "source": { "title": "BFS 2024:12 Tillgänglighet och användbarhet", "section": "2 kap. 9 §, 1 kap. 6 §", "url": "https://rinfo.boverket.se/BFS2024-12/pdf/BFS2024-12.pdf" },
+      "verified": true,
+      "notes": "If no bathroom's shortest side reaches 1.30 m, the circle can't fit (a real fail). If one does, fixtures may still block it, so that's 'check manually'."
+    },
+    {
+      "id": "bfs2024-12.door.entrance.dwelling",
+      "title": "Entrance door clear width (dwelling)",
+      "appliesTo": "door",
+      "where": { "isExternal": [true] },
+      "when": [{ "property": "use", "op": "in", "value": ["house"] }],
+      "check": { "property": "clearWidth", "op": ">=", "value": 0.76, "unit": "m", "upper": "width" },
+      "text": "I enskilda bostäder är dock följande mått dimensionerande […] 3. öppningsmåttet för fri passage minst 0,76 meter.",
+      "source": { "title": "BFS 2024:12 Tillgänglighet och användbarhet", "section": "1 kap. 6 §, 2 kap. 1 §", "url": "https://rinfo.boverket.se/BFS2024-12/pdf/BFS2024-12.pdf" },
+      "verified": true,
+      "notes": "Applies to entrances that must be accessible (huvudentré). Without a clear width in the model, an overall width below the limit is still a real fail."
+    },
+    {
+      "id": "bfs2024-12.door.entrance",
+      "title": "Entrance door clear width",
+      "appliesTo": "door",
+      "where": { "isExternal": [true] },
+      "when": [{ "property": "use", "op": "in", "value": ["apartments", "nonResidential"] }],
+      "check": { "property": "clearWidth", "op": ">=", "value": 0.80, "unit": "m", "upper": "width" },
+      "text": "öppningsmåttet för fri passage minst 0,80 meter.",
+      "source": { "title": "BFS 2024:12 Tillgänglighet och användbarhet", "section": "1 kap. 6 §, 2 kap. 1 §", "url": "https://rinfo.boverket.se/BFS2024-12/pdf/BFS2024-12.pdf" },
+      "verified": true,
+      "notes": "Also the minimum for utrymningsdörrar serving ≤150 persons, BFS 2024:7 7 kap. 27 §."
+    },
+    {
+      "id": "bfs2024-12.door.interior",
+      "title": "Interior door clear width (if it must be accessible)",
+      "appliesTo": "door",
+      "where": { "isExternal": [false] },
+      "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
+      "check": { "property": "clearWidth", "op": ">=", "value": 0.76, "unit": "m", "upper": "width" },
+      "onFail": "manual",
+      "failHint": "That's fine for a closet, but doors on the accessible route (entrance level, accessible bathroom, a bedroom) need 0.76 m clear passage.",
+      "text": "I enskilda bostäder är dock följande mått dimensionerande […] 3. öppningsmåttet för fri passage minst 0,76 meter.",
+      "source": { "title": "BFS 2024:12 Tillgänglighet och användbarhet", "section": "1 kap. 6 §", "url": "https://rinfo.boverket.se/BFS2024-12/pdf/BFS2024-12.pdf" },
+      "verified": true
+    },
+    {
+      "id": "bfs2024-9.door.freeHeight",
+      "title": "Free height in doors",
+      "appliesTo": "door",
+      "check": { "property": "clearHeight", "op": ">=", "value": 2.00, "unit": "m", "upper": "height" },
+      "text": "Den fria höjden ska vara minst 2,00 meter i utrymningspassager, trappor, dörrar och andra kommunikationsutrymmen.",
+      "source": { "title": "BFS 2024:9 Säkerhet vid användning", "section": "2 kap. 25 §", "url": "https://rinfo.boverket.se/BFS2024-9/pdf/BFS2024-9.pdf" },
+      "verified": true
+    },
+    {
+      "id": "bfs2024-12.elevator",
+      "title": "Elevator when there are level differences over 1 m",
+      "appliesTo": "building",
+      "when": [
+        { "property": "use", "op": "in", "value": ["apartments", "nonResidential"] },
+        { "property": "storeys", "op": ">=", "value": 2 }
+      ],
+      "necessary": true,
+      "check": { "property": "elevators", "op": ">=", "value": 1 },
+      "text": "Kommunikationsutrymmen som har nivåskillnader ska förutom trappa även ha ramp eller hiss. Om nivåskillnaden är större än 1 meter ska det finnas en hiss.",
+      "source": { "title": "BFS 2024:12 Tillgänglighet och användbarhet", "section": "2 kap. 2 §", "url": "https://rinfo.boverket.se/BFS2024-12/pdf/BFS2024-12.pdf" },
+      "verified": true,
+      "notes": "The lift must also hold a wheelchair user and a helper, with a free space whose short side is at least 1 100 mm (2 kap. 5 §) — that part is left for manual checking."
+    },
+    {
+      "id": "bfs2024-12.elevator.tall",
+      "title": "More than one elevator in buildings over ten storeys",
+      "appliesTo": "building",
+      "when": [{ "property": "storeys", "op": ">", "value": 10 }],
+      "check": { "property": "elevators", "op": ">=", "value": 2 },
+      "text": "I en byggnad som har fler än tio plan ska byggnadens användare ha tillgång till mer än en personhiss.",
+      "source": { "title": "BFS 2024:12 Tillgänglighet och användbarhet", "section": "2 kap. 5 §", "url": "https://rinfo.boverket.se/BFS2024-12/pdf/BFS2024-12.pdf" },
+      "verified": true
+    },
+    {
+      "id": "bfs2024-12.elevator.stretcher",
+      "title": "Stretcher transport by elevator (apartments over four storeys)",
+      "appliesTo": "building",
+      "when": [
+        { "property": "use", "op": "in", "value": ["apartments"] },
+        { "property": "storeys", "op": ">", "value": 4 }
+      ],
+      "manual": "Check that at least one elevator can take a stretcher (sjukbår).",
+      "text": "Transport med sjukbår ska kunna ske i hiss, i ett bostadshus som har fler än fyra plan.",
+      "source": { "title": "BFS 2024:12 Tillgänglighet och användbarhet", "section": "3 kap. 5 §", "url": "https://rinfo.boverket.se/BFS2024-12/pdf/BFS2024-12.pdf" },
+      "verified": true
+    },
+    {
+      "id": "bfs2024-12.entranceLevel",
+      "title": "Entrance level of a multi-level dwelling",
+      "appliesTo": "building",
+      "when": [
+        { "property": "use", "op": "in", "value": ["house"] },
+        { "property": "storeys", "op": ">=", "value": 2 }
+      ],
+      "manual": "At least the entrance level must be accessible. If only the entrance level is, it must give access to all dwelling functions (sleep, living, cooking, meals, hygiene, storage).",
+      "text": "I en bostad som har flera plan ska minst entréplanet vara tillgängligt och användbart. Om enbart entréplanet är tillgängligt och användbart ska det på entréplanet finnas tillgång till samtliga bostadsfunktioner.",
+      "source": { "title": "BFS 2024:12 Tillgänglighet och användbarhet", "section": "2 kap. 12 §", "url": "https://rinfo.boverket.se/BFS2024-12/pdf/BFS2024-12.pdf" },
+      "verified": true
+    },
+    {
+      "id": "bfs2024-7.escapeWindow",
+      "title": "Escape window (fönster för utrymning)",
+      "appliesTo": "window",
+      "where": { "escape": [true] },
+      "checks": [
+        { "property": "openingWidth", "op": ">=", "value": 0.50, "unit": "m", "upper": "width" },
+        { "property": "openingHeight", "op": ">=", "value": 0.60, "unit": "m", "upper": "height" },
+        { "property": "openingWidthPlusHeight", "op": ">=", "value": 1.50, "unit": "m", "upper": "widthPlusHeight" },
+        { "property": "sillHeight", "op": "<=", "value": 1.20, "unit": "m" }
+      ],
+      "text": "Fönster eller motsvarande för utrymning ska 1. vara öppningsbara utan nyckel eller annat redskap, 2. stanna i öppet läge efter öppning, 3. ha en fri öppning med minst 0,50 meter bredd, 4. ha en fri öppning med minst 0,60 meter höjd, 5. ha en summa av bredd och höjd som är minst 1,50 meter, och 6. ha ett avstånd från underkant till golv, plattform eller liknande på högst 1,20 meter.",
+      "source": { "title": "BFS 2024:7 Säkerhet i händelse av brand", "section": "2 kap. 26 §", "url": "https://rinfo.boverket.se/BFS2024-7/pdf/BFS2024-7.pdf" },
+      "verified": true,
+      "notes": "Points 1–2 (hardware) can't be checked from a model. Mark windows meant for escape with escape = true."
+    },
+    {
+      "id": "bfs2024-9.window.childSafety",
+      "title": "Low windows need child safety devices",
+      "appliesTo": "window",
+      "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
+      "check": { "property": "sillHeight", "op": ">=", "value": 0.60, "unit": "m" },
+      "onFail": "manual",
+      "failHint": "If it opens and the fall height is 2.0 m or more, it needs a safety device that locks it closed and at an opening of at most 100 mm.",
+      "text": "Om avståndet mellan karmöppningen och golvet är mindre än 0,60 meter, ska säkerhetsanordningarna ha funktioner som kan fixera fönstret eller dörren 1. i stängt läge, och 2. i ett läge med en öppning som är högst 100 mm. Kraven i första och andra styckena gäller inte om fallhöjden är mindre än 2,0 meter […]",
+      "source": { "title": "BFS 2024:9 Säkerhet vid användning", "section": "2 kap. 4 §", "url": "https://rinfo.boverket.se/BFS2024-9/pdf/BFS2024-9.pdf" },
+      "verified": true
+    },
+    {
+      "id": "bfs2024-8.ceilingHeight",
+      "title": "Room height",
+      "appliesTo": "room",
+      "where": { "type": ["living", "bedroom", "kitchen"] },
+      "binding": false,
+      "check": { "property": "ceilingHeight", "op": ">=", "value": 2.40, "unit": "m" },
+      "text": "Rumshöjden ska vara tillräcklig för att undvika olägenheter för människors hälsa och vara anpassad till rummets avsedda användning.",
+      "source": { "title": "BFS 2024:8 Hygien, hälsa och miljö", "section": "5 kap. 1 §", "url": "https://rinfo.boverket.se/BFS2024-8/pdf/BFS2024-8.pdf" },
+      "verified": true,
+      "notes": "The regulation gives no number. 2.40 m is the old BBR 3:311 minimum, used here only as a reference."
+    },
+    {
+      "id": "bfs2024-8.daylight",
+      "title": "Daylight in dwellings",
+      "appliesTo": "building",
+      "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
+      "manual": "Needs a daylight calculation: a daylight factor of at least 1.0 % over at least half of the combined floor area of rooms where people stay more than briefly.",
+      "text": "Bostäder ska vara utformade så att de har tillgång till dagsljus motsvarande en dagsljusfaktor om minst 1,0 procent, för minst halva den sammanlagda bedömda ytan av samtliga rum i bostaden, där människor vistas mer än tillfälligt.",
+      "source": { "title": "BFS 2024:8 Hygien, hälsa och miljö", "section": "4 kap. 1 §", "url": "https://rinfo.boverket.se/BFS2024-8/pdf/BFS2024-8.pdf" },
+      "verified": true
+    },
+    {
+      "id": "bfs2024-8.view",
+      "title": "View out from living and dining space",
+      "appliesTo": "room",
+      "where": { "type": ["living"] },
+      "manual": "The space for living and meals must have a view out (utblick). Check window placement.",
+      "text": "I bostäder ska utrymme för bostadsfunktionerna samvaro och måltider ha utblick.",
+      "source": { "title": "BFS 2024:8 Hygien, hälsa och miljö", "section": "4 kap. 2 §", "url": "https://rinfo.boverket.se/BFS2024-8/pdf/BFS2024-8.pdf" },
+      "verified": true
+    },
+    {
+      "id": "bfs2024-8.ventilation",
+      "title": "Ventilation rate in dwellings",
+      "appliesTo": "building",
+      "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
+      "manual": "The ventilation system must be designed for at least 0.35 l/s outdoor air per m² floor area. Check with the ventilation design.",
+      "text": "Ventilationssystem för bostäder ska vara utformade för ett uteluftsflöde på minst 0,35 l/s per kvadratmeter golvarea.",
+      "source": { "title": "BFS 2024:8 Hygien, hälsa och miljö", "section": "3 kap. 5 §", "url": "https://rinfo.boverket.se/BFS2024-8/pdf/BFS2024-8.pdf" },
+      "verified": true
+    },
+    {
+      "id": "bfs2026-4.bikeParking",
+      "title": "Bicycle parking: two spaces per apartment",
+      "appliesTo": "building",
+      "when": [{ "property": "use", "op": "in", "value": ["apartments"] }],
+      "check": { "property": "bikeParkingPerApartment", "op": ">=", "value": 2 },
+      "text": "Ett flerbostadshus ska ha minst två cykelparkeringsplatser för varje bostadslägenhet. Det ska i skälig omfattning finnas platser för cyklar med större dimensioner än standardcyklar.",
+      "source": { "title": "BFS 2026:4 Hållbar mobilitet (i kraft 1 juli 2026)", "section": "2 kap. 2 §", "url": "https://rinfo.boverket.se/BFS2026-4/pdf/BFS2026-4.pdf" },
+      "verified": true,
+      "notes": "The number may be adapted to local conditions (2 kap. 2 § andra stycket)."
+    },
+    {
+      "id": "bfs2026-4.charging.apartments",
+      "title": "EV charging: at least one charging point",
+      "appliesTo": "building",
+      "when": [
+        { "property": "use", "op": "in", "value": ["apartments"] },
+        { "property": "carParking", "op": ">", "value": 3 }
+      ],
+      "necessary": true,
+      "check": { "property": "chargingPoints", "op": ">=", "value": 1 },
+      "text": "Ett flerbostadshus med bilparkering med fler än tre bilparkeringsplatser […] ska ha tillgång till följande utrustning för laddning av elfordon: 1. Förinstallerad kabeldragning för minst hälften av bilparkeringsplatserna. 2. Ledningsinfrastruktur för återstående bilparkeringsplatser. 3. Minst en laddningspunkt.",
+      "source": { "title": "BFS 2026:4 Hållbar mobilitet (i kraft 1 juli 2026)", "section": "2 kap. 1 §", "url": "https://rinfo.boverket.se/BFS2026-4/pdf/BFS2026-4.pdf" },
+      "verified": true,
+      "notes": "Cabling for half of the spaces and conduits for the rest are checked manually."
+    },
+    {
+      "id": "bfs2026-4.charging.nonResidential",
+      "title": "EV charging: one point per five parking spaces",
+      "appliesTo": "building",
+      "when": [
+        { "property": "use", "op": "in", "value": ["nonResidential"] },
+        { "property": "carParking", "op": ">", "value": 5 }
+      ],
+      "necessary": true,
+      "check": { "property": "chargingPointsPerCarParking", "op": ">=", "value": 0.2 },
+      "text": "En lokalbyggnad med bilparkering med fler än fem bilparkeringsplatser […] 3. Minst en laddningspunkt per fem bilparkeringsplatser. För en lokalbyggnad i vilken mer än halva bruttoarean är avsedd för kontorsverksamhet gäller trots första stycket 3 krav på minst en laddningspunkt per två bilparkeringsplatser.",
+      "source": { "title": "BFS 2026:4 Hållbar mobilitet (i kraft 1 juli 2026)", "section": "2 kap. 3 §", "url": "https://rinfo.boverket.se/BFS2026-4/pdf/BFS2026-4.pdf" },
+      "verified": true,
+      "notes": "Offices (more than half of BTA) need one per two spaces — not distinguished yet."
+    },
+    {
+      "id": "bfs2026-9.energy",
+      "title": "Energy performance",
+      "appliesTo": "building",
+      "manual": "Energy requirements (BFS 2026:9, in force 1 October 2026, replacing BBR chapter 9) need an energy calculation and can't be checked from the model. BBR may still be used for bygglov applications submitted before 1 October 2027.",
+      "source": { "title": "BFS 2026:9 Energihushållning och värmeisolering i byggnader", "url": "https://rinfo.boverket.se/BFS2026-9/pdf/BFS2026-9.pdf" },
+      "verified": true
+    }
+  ]
+}

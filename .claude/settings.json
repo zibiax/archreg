@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nix eval *)",
+      "Bash(journalctl -k *)",
+      "Bash(journalctl -b *)",
+      "Bash(journalctl --user *)",
+      "Bash(bluetoothctl info *)",
+      "Bash(bluetoothctl list)",
+      "Bash(bluetoothctl show)",
+      "Bash(lsusb)",
+      "Bash(lsusb *)",
+      "Bash(lspci)",
+      "Bash(lspci *)",
+      "Bash(ip -s link)",
+      "Bash(ip route get *)",
+      "Bash(hyprctl layers)",
+      "Bash(sensors)",
+      "Bash(systemctl --user is-active *)",
+      "Bash(systemctl --user status *)",
+      "Bash(wpctl status)",
+      "Bash(nvidia-smi)",
+      "Bash(nvidia-smi --query*)",
+      "Bash(lsblk)",
+      "Bash(lsblk *)",
+      "Bash(systemctl status *)",
+      "Bash(npm view *)",
+      "Bash(bluetoothctl devices)",
+      "mcp__atuin__atuin_threads_read"
+    ]
+  }
+}
