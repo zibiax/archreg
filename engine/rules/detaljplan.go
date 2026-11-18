@@ -56,6 +56,14 @@ func classify(r PlanRegulation) regKind {
 	return kindUnknown
 }
 
+// isUse: an användningsbestämmelse (B = bostäder, K = kontor, ...).
+var useLabelRe = regexp.MustCompile(`^[A-ZÅÄÖ]{1,4}\d?$`)
+
+func isUse(r PlanRegulation) bool {
+	c := strings.ToLower(r.Category)
+	return strings.Contains(c, "användning") || (r.Category == "" && useLabelRe.MatchString(r.Label) && len(r.Text) < 60)
+}
+
 func regValue(r PlanRegulation) (float64, bool) {
 	if r.Value != nil {
 		return *r.Value, true
@@ -146,7 +154,7 @@ func (c *planContext) result(id, title string, reg PlanRegulation, s Status, msg
 	}
 	return Result{
 		RuleID: id, Group: GroupPlan, Status: s, Title: title, Message: msg,
-		Source: src, RegulationID: reg.ID, Elements: []string{"footprint"},
+		Source: src, RegulationID: reg.ID, Elements: []string{"footprint"}, Text: reg.Text,
 	}
 }
 
@@ -196,6 +204,9 @@ func (c *planContext) checkRegulation(reg PlanRegulation) Result {
 	}
 
 	if kind == kindUnknown {
+		if isUse(reg) {
+			return c.result("dp.use", title, reg, Manual, "The land is for: "+reg.Text+". Check that what you're designing is that kind of building.")
+		}
 		return c.result(id, title, reg, Manual, "This regulation can't be checked from a model. Read it and judge whether the design meets it.")
 	}
 	if c.footprint == nil {

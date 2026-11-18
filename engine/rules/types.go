@@ -129,6 +129,7 @@ type Result struct {
 	Required     *float64 `json:"required,omitempty"`
 	Unit         string   `json:"unit,omitempty"`
 	Source       Source   `json:"source"`
+	Text         string   `json:"text,omitempty"`         // the regulation text, quoted
 	Draft        bool     `json:"draft,omitempty"`        // rule values not verified against the regulation text
 	RegulationID string   `json:"regulationId,omitempty"` // plan regulation the result comes from
 }

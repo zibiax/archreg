@@ -100,32 +100,68 @@ The *Start asking…* field lets users ask things like *"Why does my window fail
 
 ---
 
+## Run it
+
+Needs only [Go](https://go.dev/dl/) 1.27+. No Node, npm or TypeScript.
+
+```sh
+go run ./cmd/serve                 # builds web/wasm/app.wasm, serves http://localhost:8080
+go test ./...                      # engine, geometry, ingest and app tests
+```
+
+Click the map to drop a pin, then **Try the sample building** (or import an IFC / .3dm). The repo ships **fictional sample plans** (IDs `EXEMPEL-…`) in Östermalm so it works before you have API access.
+
+**Real detaljplaner:** put your Lantmäteriet credentials in `.env` and fetch:
+
+```sh
+# .env
+LM_CLIENT_ID=...        # consumer key, Lantmäteriet API portal
+LM_CLIENT_SECRET=...    # consumer secret
+LM_ENV=prod             # or "ver" for Lantmäteriet's test environment
+
+go run ./cmd/fetch-plans                                   # Stockholm inner city
+go run ./cmd/fetch-plans -bbox 667000,6575000,680000,6588000 -dump raw.json
+go run ./cmd/fetch-plans -sample                           # back to the sample data
+```
+
+### Docker / Raspberry Pi
+
+A GitHub Action (`.github/workflows/docker.yml`) tests the code and pushes a multi-arch image (amd64, arm64, arm/v7) to Docker Hub on every push to `master` and on `v*` tags. Set the repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`. If `LM_CLIENT_ID` / `LM_CLIENT_SECRET` are set too, real plans are fetched and baked into the image.
+
+```sh
+docker run -d --restart unless-stopped -p 8080:8080 --name archreg <dockerhub-user>/archreg
+
+# Or fetch real plans on the Pi into a volume, and serve them:
+docker run --rm -v archreg-plans:/app/web/data/plans --env-file .env \
+  --entrypoint fetch-plans <dockerhub-user>/archreg -out /app/web/data/plans
+docker run -d -p 8080:8080 -v archreg-plans:/app/web/data/plans <dockerhub-user>/archreg
+```
+
+---
+
 ## Architecture
+
+Everything that has logic is **Go**. The browser runs one WASM module (`cmd/wasm`) that holds the whole app: rules engine, plan lookup, SWEREF 99 TM conversion, turning raw geometry into rooms/windows/doors, the chat answers, and even the side panel's HTML (`html/template`). `web/app.js` is thin glue: the map, the 3D view and the IFC/Rhino readers are JavaScript libraries, so something has to call them; it forwards events to Go and applies the view Go returns.
 
 ```mermaid
 flowchart LR
-    subgraph Build["Build time (GitHub Action / script, holds API keys)"]
-        NGP[Lantmäteriet NGP<br/>detaljplaner API] --> Conv[Convert + split]
-        Rules[Boverket regulations<br/>hand-written rules] --> RJSON[rules.json]
-        Conv --> FGB[Plans as FlatGeobuf<br/>+ index]
+    subgraph Build["Build time (cmd/fetch-plans, holds API keys)"]
+        NGP[Lantmäteriet NGP<br/>detaljplan API] --> Conv[Normalise + split<br/>into 1 km grid]
     end
 
-    subgraph Static["Static hosting (GitHub Pages / Cloudflare Pages)"]
-        FGB
-        RJSON
-        App[Web app]
+    subgraph Static["Static files (web/)"]
+        Conv --> Cells[data/plans/*.json]
+        RJSON[rules/*.json<br/>embedded in WASM]
+        WASM[wasm/app.wasm]
     end
 
     subgraph Browser["Browser (all client-side)"]
-        UI[TypeScript UI] --> Map[MapLibre GL<br/>basemap + plan layers]
-        UI --> Viewer[three.js<br/>3D view]
-        UI --> Loader[Model loaders<br/>web-ifc / rhino3dm.js — WASM]
-        Loader --> Simple[Simplified model<br/>volumes, rooms, elements]
-        Simple --> Engine[Rules engine<br/>Go → WASM]
-        RJSON --> Engine
-        FGB --> Engine
-        Engine --> Results[Check results JSON]
-        Results --> UI
+        Glue[app.js glue] --> Map[MapLibre GL]
+        Glue --> Viewer[three.js]
+        Glue --> Loader[web-ifc / rhino3dm<br/>→ raw triangles]
+        Loader --> Go
+        Glue <--> Go[Go WASM app<br/>ingest · plans · rules · panel · chat]
+        Cells --> Go
     end
 ```
 
@@ -133,31 +169,37 @@ flowchart LR
 
 | Part | Choice | Why |
 |---|---|---|
-| UI | TypeScript (+ a light framework such as Svelte or React) | Most of the needed libraries are JavaScript |
-| Map | [MapLibre GL JS](https://maplibre.org/) | Open source, handles both raster and vector tiles |
-| 3D view | [three.js](https://threejs.org/) | Standard for 3D in the browser; used by IFC viewers |
+| App logic + UI rendering | **Go → WASM** (`GOOS=js GOARCH=wasm`), `html/template` | One language for engine, pipeline, server and UI |
+| Glue | One plain ES module (`web/app.js`), no build step | The map/3D/IFC libraries are JavaScript |
+| Map | [MapLibre GL JS](https://maplibre.org/) + [OpenFreeMap](https://openfreemap.org/) grey style | Open source, no key |
+| 3D view | [three.js](https://threejs.org/) | Standard for 3D in the browser |
 | IFC reading | `web-ifc` (C++ → WASM) | Fast IFC parsing in the browser |
 | Rhino reading | `rhino3dm.js` (C++ → WASM) | McNeel's official `.3dm` library |
-| Rules engine | **Go → WASM** (`GOOS=js GOARCH=wasm`, or TinyGo for smaller files) | Same engine could later run as a CLI or on a server |
-| Plan data | FlatGeobuf (or PMTiles) on static hosting | The browser fetches only the part it needs with HTTP range requests, so there's no database server |
-| Hosting | GitHub Pages / Cloudflare Pages | Free and static |
+| Plan data | Static JSON in a 1 km SWEREF grid | The browser loads only the cells it needs; no database |
+| Data pipeline, dev server | Go (`cmd/fetch-plans`, `cmd/serve`) | Same types as the engine |
+| Hosting | Any static host, or the Docker image | |
 
-### Rules engine (WASM)
-The engine is a pure function with one boundary between TypeScript and Go, so there are few slow calls across the JS↔WASM border:
+JS libraries load from jsDelivr with pinned versions (see the import map in `web/index.html`).
+
+### Rules engine
+The engine (`engine/rules`) is a pure function, also usable from the command line (`go run ./cmd/archreg-check -rules rules/boverket-2026.json input.json`) and from JS as `archreg.check(inputJSON)`:
 
 ```
-check(model, plan, rules) → results
+Check(model, plan, rules) → results
 ```
 
-**Input** (JSON from TypeScript):
+**Input:**
 ```json
 {
   "model": {
     "footprint": [[674210.2, 6581340.1], "..."],
+    "footprintMethod": "convexHull",
     "ridgeHeight": 6.9,
     "storeys": 2,
-    "rooms": [{ "id": "R12", "type": "bathroom", "area": 3.6, "ceilingHeight": 2.35 }],
-    "windows": [{ "id": "W-04", "name": "Fönster sovrum", "width": 0.9, "height": 1.1 }]
+    "building": { "use": "apartments", "apartments": 12, "bikeParking": 20 },
+    "rooms": [{ "id": "R12", "type": "bathroom", "area": 3.6, "ceilingHeight": 2.35, "minDimension": 1.2 }],
+    "windows": [{ "id": "W-04", "name": "Fönster sovrum", "width": 0.9, "height": 1.1, "sillHeight": 0.9, "escape": true }],
+    "doors": [{ "id": "D1", "width": 0.9, "height": 2.1, "isExternal": true }]
   },
   "plan": { "id": "0180K-P2023/04", "regulations": ["..."] },
   "ruleset": "boverket-2026"
@@ -172,23 +214,30 @@ check(model, plan, rules) → results
       "ruleId": "dp.prickmark",
       "group": "detaljplan",
       "status": "fail",
-      "message": "0.8 m of the building is on prickmark",
+      "message": "4.0 m² of the building is on prickmark (land that may not be built on).",
       "elements": ["footprint"],
-      "source": { "title": "Detaljplan 0180K-P2023/04", "url": "…" }
+      "source": { "title": "Detaljplan 0180K-P2023/04" }
     },
     {
-      "ruleId": "bfs.room.ceilingHeight",
+      "ruleId": "bfs2024-7.escapeWindow",
       "group": "regulations",
       "status": "fail",
-      "message": "Ceiling height 2.35 m, minimum 2.40 m",
-      "elements": ["R12"],
-      "source": { "title": "BFS 2024:…", "url": "…" }
+      "message": "Window Fönster sovrum: width plus height is 1.1 m, so the opening width plus height is certainly below 1.5 m.",
+      "elements": ["W-04"],
+      "text": "Fönster eller motsvarande för utrymning ska […]",
+      "source": { "title": "BFS 2024:7 Säkerhet i händelse av brand", "section": "2 kap. 26 §", "url": "…" }
     }
-  ]
+  ],
+  "summary": { "fail": 2, "manual": 9, "missing": 1, "pass": 6 }
 }
 ```
 
-The UI uses `elements` to highlight failing parts in the 3D view, and `source` to show and link the rule text.
+How the engine stays honest:
+- The footprint is a convex hull, so it can only **overestimate**. A fail that depends on it (prickmark, BYA) becomes *check manually*.
+- An overall door or window size below the limit is a **real fail**, since the clear opening is always smaller. An overall size above the limit only gives *check manually*.
+- Rules marked `necessary` (e.g. a 1.30 m turning circle needs the bathroom's shortest side to be at least 1.30 m) can fail, but never pass on their own.
+- Rules with `binding: false` (e.g. the old 2.40 m room height) only give guidance.
+- Rules with `verified: false` never produce a pass.
 
 ---
 
@@ -204,26 +253,43 @@ The UI uses `elements` to highlight failing parts in the 3D view, and `source` t
 ### Detaljplaner
 - Since 1 January 2022, new detaljplaner must be digital, and municipalities publish them through Lantmäteriet's **Nationella geodataplattformen (NGP)**.
 - A build script fetches the plans for the areas the app supports (starting with **Stockholm**), converts them, and publishes static files.
-- Plan regulations are matched against Boverket's **planbestämmelsekatalog** (open data, JSON/XML) so common regulations can be checked automatically. Regulations the municipality wrote as free text become *check manually*.
+- Plan regulations are classified from their catalogue wording (Boverket's **planbestämmelsekatalog**), e.g. *"Marken får inte förses med byggnad"* → prickmark, *"Högsta nockhöjd är … meter"* → ridge height. Regulations the municipality wrote as free text become *check manually*.
+- `cmd/fetch-plans` uses the **Geodatakatalog Sökning, detaljplan v2** API (OGC API Features / STAC search, OAuth2 client credentials). Plans and their planbestämmelser are separate features, linked by a `huvudobjekt` link. The parsing follows the published OpenAPI spec but hasn't been run against the live API yet.
 - Plans adopted before the digital requirement are mostly scanned PDFs → shown, not checked.
 - Definitions such as *byggnadshöjd* depend on when the plan was adopted. The engine has to use the definition that was in force at that time.
 
 ### Building regulations
-- Boverket's **new building regulations (BFS 2024:6–13)** replaced BBR and EKS on 1 July 2025. The transition period ended on 30 June 2026, so only the new rules apply to new cases.
-- Exception: **energy requirements are still in BBR**, since Boverket hasn't issued replacement energy rules yet.
-- Regulations are legal text and can't be scraped straight into checks. Each checkable requirement is written by hand as a structured rule in `rules/*.json`:
+`rules/boverket-2026.json` encodes the rules **in force in November 2026**, each with its exact chapter/paragraph and the quoted regulation text, taken from the official PDFs at rinfo.boverket.se:
+
+| Regulation | In force | What the app checks |
+|---|---|---|
+| BFS 2024:7 Brandskydd (amended by BFS 2025:10) | 1 Jul 2025 | Escape window sizes and sill height (2 kap. 26 §) |
+| BFS 2024:8 Hygien, hälsa och miljö | 1 Jul 2025 | Room height (functional; old 2.40 m as reference), daylight factor and view out, ventilation (manual) |
+| BFS 2024:9 Säkerhet vid användning | 1 Jul 2025 | Free height in doors 2.00 m, child safety for low windows |
+| BFS 2024:11 Bostäders lämplighet | 1 Jul 2025 | Room for personal hygiene |
+| BFS 2024:12 Tillgänglighet | 1 Jul 2025 | Door clear width 0.80 / 0.76 m, 1.30 m turning circle in a bathroom, lifts, entrance level |
+| **BFS 2026:4 Hållbar mobilitet** | **1 Jul 2026** | Two bike parking spaces per apartment, EV charging points |
+| **BFS 2026:9 Energihushållning** | **1 Oct 2026** | Replaces BBR chapter 9. Needs an energy calculation, so manual |
+
+- The transition period for BFS 2024:6–13 ended on 30 June 2026. BBR may still be used for energy requirements on bygglov applications submitted before 1 October 2027.
+- Most of the new rules are **functional** (e.g. room height must be "sufficient"), so many results are *check manually* by design.
+- A rule looks like this:
 
 ```json
 {
-  "id": "bfs.room.ceilingHeight",
-  "appliesTo": "room",
-  "where": { "type": ["living", "bedroom", "kitchen"] },
-  "check": { "property": "ceilingHeight", "op": ">=", "value": 2.40, "unit": "m" },
-  "source": { "title": "BFS 2024:…", "section": "…", "url": "…" }
+  "id": "bfs2024-12.door.entrance",
+  "title": "Entrance door clear width",
+  "appliesTo": "door",
+  "where": { "isExternal": [true] },
+  "when": [{ "property": "use", "op": "in", "value": ["apartments", "nonResidential"] }],
+  "check": { "property": "clearWidth", "op": ">=", "value": 0.80, "unit": "m", "upper": "width" },
+  "text": "öppningsmåttet för fri passage minst 0,80 meter.",
+  "source": { "title": "BFS 2024:12", "section": "1 kap. 6 §, 2 kap. 1 §", "url": "…" },
+  "verified": true
 }
 ```
 
-> Numbers in this README are examples. Every rule must be verified against the current regulation text before it goes into `rules/`.
+`go run ./cmd/archreg-check -validate rules/*.json` checks rule files, and the tests run every rule against a sample model.
 
 ---
 
@@ -233,23 +299,31 @@ Any key used by code running in the browser can be read by the user: it shows up
 
 - **No secret keys in the app.** Ever.
 - Keys live only in the **build script** (as GitHub Actions secrets), which fetches data and publishes plain static files.
-- If something must be fetched live with a key (the Lantmäteriet map, an LLM for the chat), it goes through a small proxy that holds the key. That's the only server-side code, and it's optional.
+- If something must be fetched live with a key (the Lantmäteriet map, an LLM for the chat), it goes through a small proxy that holds the key. That's the only server-side code, and it's optional (not built yet).
+- Address search and reverse geocoding use OpenStreetMap's Nominatim (no key, light interactive use only).
 
 ---
 
-## Project structure (proposed)
+## Project structure
 
 ```
 .
-├── web/                  # TypeScript app (UI, map, 3D view, loaders)
-├── engine/               # Go rules engine, compiled to WASM
-│   ├── cmd/wasm/         # WASM entry point (exposes check())
-│   └── rules/            # Rule evaluation logic
-├── rules/                # Hand-written rule definitions (JSON)
-├── data-pipeline/        # Build scripts: fetch NGP plans → FlatGeobuf
-├── proxy/                # Optional Cloudflare Worker for map tiles / LLM
-└── docs/
-    └── images/           # Design mockups
+├── cmd/
+│   ├── wasm/             # The browser app: exposes globalThis.archreg
+│   ├── serve/            # Dev server (builds the WASM first); used in the Docker image
+│   ├── fetch-plans/      # Data pipeline: NGP detaljplaner → web/data/plans (+ -sample)
+│   └── archreg-check/    # CLI for the rules engine
+├── engine/
+│   ├── rules/            # Rules engine: detaljplan + building regulation checks
+│   ├── ingest/           # Raw IFC/3dm geometry → rooms, windows, doors, heights, footprint
+│   ├── geo/              # SWEREF 99 TM ⇄ WGS84, hulls, polygons
+│   ├── plans/            # Plan data store (1 km grid), lookup by point
+│   └── app/              # App state, actions, side panel templates, chat
+├── rules/                # Hand-written rule definitions (JSON, embedded in the WASM)
+├── web/                  # index.html, app.js (glue), style.css, data/, wasm/ (built)
+├── Dockerfile            # Multi-arch image (amd64, arm64, arm/v7)
+├── .github/workflows/    # Test + build + push to Docker Hub
+└── docs/images/          # Design mockups
 ```
 
 ---

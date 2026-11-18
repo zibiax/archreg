@@ -1,0 +1,195 @@
+{{define "panel"}}
+<nav class="tabs" role="tablist">
+  <button role="tab" data-action="tab" data-value="site" {{if eq .Tab "site"}}aria-selected="true"{{end}}>Site</button>
+  <button role="tab" data-action="tab" data-value="model" {{if eq .Tab "model"}}aria-selected="true"{{end}}>Model</button>
+  <button role="tab" data-action="tab" data-value="results" {{if eq .Tab "results"}}aria-selected="true"{{end}}>
+    Results{{if .Out}} <span class="badge {{if gt (count .Counts "fail") 0}}bad{{end}}">{{count .Counts "fail"}}</span>{{end}}
+  </button>
+</nav>
+<div class="tab-body">
+{{if eq .Tab "site"}}{{template "site" .}}{{end}}
+{{if eq .Tab "model"}}{{template "model" .}}{{end}}
+{{if eq .Tab "results"}}{{template "results" .}}{{end}}
+</div>
+{{end}}
+
+{{define "site"}}
+{{if and .Index .Index.Sample}}<p class="note warn"><b>Sample plan data.</b> The plans on the map are fictional (IDs start with EXEMPEL). Add Lantmäteriet credentials to <code>.env</code> and run <code>go run ./cmd/fetch-plans</code> for real detaljplaner.</p>{{end}}
+{{if .IdxErr}}<p class="note warn">No plan data found ({{.IdxErr}}). Run <code>go run ./cmd/fetch-plans -sample</code> or fetch real data.</p>{{end}}
+{{if not .Pin}}
+  <div class="empty">
+    <svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+    <p><b>Drop a pin to see the details</b></p>
+    <p class="muted">Click on the map, or search for an address above.</p>
+  </div>
+{{else}}
+  <h2 class="address">{{.Pin.Address}}</h2>
+  <p class="muted small">{{printf "%.1f" .Pin.E}} E, {{printf "%.1f" .Pin.N}} N (SWEREF 99 TM)</p>
+  {{if not .Plans}}
+    <p class="note">No digital detaljplan covers this point in the loaded data. Older plans exist only as scanned documents — check the municipality's plan map.</p>
+  {{else}}
+    {{if gt (len .Plans) 1}}
+      <label class="field">Plans at this point
+        <select data-action="plan">{{range $i, $p := .Plans}}<option value="{{$i}}" {{if eq $i $.PlanIdx}}selected{{end}}>{{$p.ID}} — {{$p.Name}}</option>{{end}}</select>
+      </label>
+    {{end}}
+    {{with .Plan}}
+    <section class="card">
+      <h3>{{if .Name}}{{.Name}}{{else}}Detaljplan {{.ID}}{{end}}</h3>
+      <dl class="facts">
+        <dt>Plan ID</dt><dd>{{.ID}}</dd>
+        {{if .Status}}<dt>Status</dt><dd>{{.Status}}</dd>{{end}}
+        {{if .LegallyBinding}}<dt>Laga kraft</dt><dd>{{.LegallyBinding}}</dd>{{end}}
+      </dl>
+      {{if .URL}}<p><a href="{{.URL}}" target="_blank" rel="noopener">Plan document ↗</a></p>{{end}}
+      {{if .PDFOnly}}<p class="note warn"><b>Can't be checked automatically.</b> This plan only exists as a scanned document. Open it and check the design by hand.</p>{{end}}
+    </section>
+    {{end}}
+    {{if .ByDate}}<p class="note">{{.ByDate}}</p>{{end}}
+    {{if .Regs}}
+    <h3>Key regulations</h3>
+    <ul class="regs">
+      {{range .Regs}}<li class="reg kind-{{if .Kind}}{{.Kind}}{{else}}manual{{end}}">
+        {{if .Label}}<span class="chip">{{.Label}}</span>{{end}}
+        <span>{{.Plain}}</span>
+        <q class="small muted">{{.Text}}</q>
+      </li>{{end}}
+    </ul>
+    {{end}}
+  {{end}}
+  {{if not .B}}<p><button class="primary" data-action="import">Import design</button> <button data-action="sample">Try the sample building</button></p>{{end}}
+{{end}}
+{{end}}
+
+{{define "model"}}
+{{if not .B}}
+  <div class="empty">
+    <p><b>No model yet</b></p>
+    <p class="muted">Revit, ArchiCAD and SketchUp Pro: export <b>IFC</b> (include rooms/spaces).<br>Rhino: upload the <b>.3dm</b> file.</p>
+    <p><button class="primary" data-action="import">Import design</button> <button data-action="sample">Try the sample building</button></p>
+  </div>
+{{else}}
+  <h2>{{.B.FileName}}</h2>
+  <dl class="facts">
+    <dt>Storeys</dt><dd>{{.B.Storeys}}</dd>
+    <dt>Total height</dt><dd>{{num .B.TotalHeight}} m</dd>
+    <dt>Ridge height</dt><dd>{{num .B.RidgeHeight}} m{{if not .B.RidgeFromRoof}} (= total){{end}}</dd>
+    <dt>Footprint</dt><dd>{{num .FootArea}} m² ({{.B.FootprintMethod}})</dd>
+    <dt>Rooms / windows / doors</dt><dd>{{len .B.Rooms}} / {{len .B.Windows}} / {{len .B.Doors}}</dd>
+    <dt>Elevators</dt><dd>{{.B.Elevators}}</dd>
+  </dl>
+  {{range .B.Warnings}}<p class="note warn small">{{.}}</p>{{end}}
+
+  <section class="card">
+    <h3>Placement</h3>
+    {{if .Place}}
+      <p class="small muted">{{.PlaceSW}}<br>Drag the orange footprint on the map to move it.</p>
+      <label class="field">Rotation <output>{{printf "%.0f" .Place.RotationDeg}}°</output>
+        <input type="range" min="-180" max="180" step="1" value="{{printf "%.0f" .Place.RotationDeg}}" data-action="rotate" data-live>
+      </label>
+      {{if .Pin}}<button data-action="place-at-pin">Move to pin</button>{{end}}
+    {{else}}
+      <p class="note">Drop a pin on the map to place the building.</p>
+    {{end}}
+  </section>
+
+  <section class="card">
+    <h3>Project info</h3>
+    <p class="small muted">Things the model can't tell. Some rules depend on them.</p>
+    <label class="field">Building type
+      <select data-action="use">{{range .Uses}}<option value="{{index . 0}}" {{if eq (index . 0) $.P.Use}}selected{{end}}>{{index . 1}}</option>{{end}}</select>
+    </label>
+    <div class="grid2">
+      <label class="field">Apartments<input inputmode="decimal" data-action="apartments" value="{{num .P.Apartments}}"></label>
+      <label class="field">Bike parking spaces<input inputmode="decimal" data-action="bikeParking" value="{{num .P.BikeParking}}"></label>
+      <label class="field">Car parking spaces<input inputmode="decimal" data-action="carParking" value="{{num .P.CarParking}}"></label>
+      <label class="field">EV charging points<input inputmode="decimal" data-action="chargingPoints" value="{{num .P.ChargingPoints}}"></label>
+      <label class="field">Elevators<input inputmode="decimal" data-action="elevators" placeholder="{{.B.Elevators}} in model" value="{{num .P.Elevators}}"></label>
+      <label class="field">Ground level (RH 2000, m)<input inputmode="decimal" data-action="baseElevation" value="{{num .P.BaseElevation}}"></label>
+    </div>
+  </section>
+
+  {{if .B.Layers}}
+  <section class="card">
+    <h3>Layers</h3>
+    <p class="small muted">.3dm files don't say what things are. Tell the app what each layer contains.</p>
+    <table class="tbl">{{range .B.Layers}}<tr><td>{{.}}</td><td>
+      <select data-action="layer" data-id="{{.}}">{{$cur := index $.LayerKinds .}}
+        <option value="" {{if eq $cur ""}}selected{{end}}>(guess)</option>
+        <option value="other" {{if eq $cur "other"}}selected{{end}}>building part</option>
+        <option value="space" {{if eq $cur "space"}}selected{{end}}>rooms</option>
+        <option value="window" {{if eq $cur "window"}}selected{{end}}>windows</option>
+        <option value="door" {{if eq $cur "door"}}selected{{end}}>doors</option>
+        <option value="roof" {{if eq $cur "roof"}}selected{{end}}>roof</option>
+        <option value="site" {{if eq $cur "site"}}selected{{end}}>ignore (site/terrain)</option>
+      </select></td></tr>{{end}}</table>
+  </section>
+  {{end}}
+
+  {{if .B.Rooms}}
+  <details class="card"><summary><h3>Rooms ({{len .B.Rooms}})</h3></summary>
+    <table class="tbl"><tr><th>Name</th><th>Type</th><th>Area</th><th>Height</th></tr>
+    {{range .B.Rooms}}<tr><td>{{index . "name"}}</td><td>
+      <select data-action="room-type" data-id="{{index . "id"}}">{{$t := str (index . "type")}}{{range $.RoomTypes}}<option {{if eq . $t}}selected{{end}}>{{.}}</option>{{end}}</select>
+    </td><td>{{num (index . "area")}} m²</td><td>{{num (index . "ceilingHeight")}} m</td></tr>{{end}}
+    </table>
+  </details>
+  {{end}}
+  {{if .B.Windows}}
+  <details class="card"><summary><h3>Windows ({{len .B.Windows}})</h3></summary>
+    <table class="tbl"><tr><th>Name</th><th>W × H</th><th>Sill</th><th title="Fönster för utrymning">Escape</th></tr>
+    {{range .B.Windows}}<tr><td>{{index . "name"}}</td><td>{{num (index . "width")}} × {{num (index . "height")}}</td><td>{{num (index . "sillHeight")}}</td>
+      <td><input type="checkbox" data-action="escape" data-id="{{index . "id"}}" {{if isTrue (index . "escape")}}checked{{end}}></td></tr>{{end}}
+    </table>
+  </details>
+  {{end}}
+  {{if .B.Doors}}
+  <details class="card"><summary><h3>Doors ({{len .B.Doors}})</h3></summary>
+    <table class="tbl"><tr><th>Name</th><th>W × H</th><th>External</th></tr>
+    {{range .B.Doors}}<tr><td>{{index . "name"}}</td><td>{{num (index . "width")}} × {{num (index . "height")}}</td>
+      <td><input type="checkbox" data-action="external" data-id="{{index . "id"}}" {{if isTrue (index . "isExternal")}}checked{{end}}></td></tr>{{end}}
+    </table>
+  </details>
+  {{end}}
+  <p><button data-action="import">Import another model</button> <button data-action="clear-model">Remove model</button></p>
+{{end}}
+{{end}}
+
+{{define "results"}}
+{{if not .Out}}
+  <div class="empty"><p><b>Nothing checked yet</b></p><p class="muted">Import a model (or try the sample building) to see what passes and fails.</p>
+  <p><button class="primary" data-action="import">Import design</button> <button data-action="sample">Try the sample building</button></p></div>
+{{else}}
+  <div class="summary">
+    <span class="s-fail">❌ {{count .Counts "fail"}} fail</span>
+    <span class="s-manual">👁 {{count .Counts "manual"}} check manually</span>
+    <span class="s-missing">❔ {{count .Counts "missing"}} missing data</span>
+    <span class="s-pass">✅ {{count .Counts "pass"}} pass</span>
+  </div>
+  {{if not .Pin}}<p class="note">No site selected — drop a pin to check the detaljplan too.</p>{{end}}
+  {{if .Plan0}}<h3>Detaljplan</h3><ul class="results">{{range .Plan0}}{{template "row" .}}{{end}}</ul>{{end}}
+  <h3>Building regulations</h3>
+  <ul class="results">{{range .Regs0}}{{template "row" .}}{{end}}</ul>
+  <p class="small muted">A learning tool, not an official review. The building permit (bygglov) process at the municipality is what counts.</p>
+{{end}}
+{{end}}
+
+{{define "row"}}
+<li class="result st-{{.R.Status}} {{if .Selected}}open{{end}}">
+  <button class="row" data-action="select" data-value="{{.I}}" aria-expanded="{{.Selected}}">
+    <span class="ic" title="{{statusText .R.Status}}">{{icon .R.Status}}</span>
+    <span class="t"><b>{{.R.Title}}</b>{{if .R.Draft}} <span class="chip draft">draft rule</span>{{end}}<br><span class="small">{{.R.Message}}</span></span>
+  </button>
+  {{if .Selected}}
+  <div class="detail">
+    {{if .Names}}<p class="small"><b>In the model:</b> {{range $i, $n := .Names}}{{if $i}}, {{end}}{{$n}}{{end}}</p>{{end}}
+    {{if .R.Text}}<blockquote>{{.R.Text}}</blockquote>{{end}}
+    <p class="small">Source: {{if .R.Source.URL}}<a href="{{.R.Source.URL}}" target="_blank" rel="noopener">{{.R.Source.Title}} ↗</a>{{else}}{{.R.Source.Title}}{{end}}{{if .R.Source.Section}}, {{.R.Source.Section}}{{end}}</p>
+  </div>
+  {{end}}
+</li>
+{{end}}
+
+{{define "chat"}}
+{{range .}}<div class="msg {{.From}}">{{.Text}}</div>{{end}}
+{{end}}

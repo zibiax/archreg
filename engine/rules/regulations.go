@@ -27,7 +27,7 @@ type outcome struct {
 func checkRule(m *Model, building Element, rule Rule) []Result {
 	base := Result{
 		RuleID: rule.ID, Group: GroupRegulations, Title: rule.Title,
-		Source: rule.Source, Draft: !rule.Verified,
+		Source: rule.Source, Draft: !rule.Verified, Text: rule.Text,
 	}
 	res := func(s Status, msg string, elems []string) Result {
 		r := base

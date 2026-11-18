@@ -108,3 +108,16 @@ func Transform(pts []Pt, rotDeg, dx, dy float64) []Pt {
 	}
 	return out
 }
+
+// Diameter is the largest distance between two points of the convex hull
+// (used for the width of a window or door seen from above).
+func Diameter(pts []Pt) float64 {
+	h := ConvexHull(pts)
+	best := 0.0
+	for i := range h {
+		for j := i + 1; j < len(h); j++ {
+			best = math.Max(best, math.Hypot(h[i][0]-h[j][0], h[i][1]-h[j][1]))
+		}
+	}
+	return best
+}

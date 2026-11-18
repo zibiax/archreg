@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Archreg</title>
+  <meta name="description" content="Check a building design against the detaljplan and Boverket's building rules, in the browser.">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.16.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "maplibre-gl": "https://cdn.jsdelivr.net/npm/maplibre-gl@6.16.0/dist/maplibre-gl.mjs",
+      "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/",
+      "web-ifc": "https://cdn.jsdelivr.net/npm/web-ifc@0.0.78/web-ifc-api.js",
+      "rhino3dm": "https://cdn.jsdelivr.net/npm/rhino3dm@8.35.0/rhino3dm.module.min.js"
+    }
+  }
+  </script>
+  <script src="wasm/wasm_exec.js"></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="welcome">Welcome to</span>
+      <span class="name">[App name]</span>
+    </div>
+    <form id="search" class="search" role="search">
+      <input name="q" type="search" placeholder="Search address, e.g. Valhallavägen 201" aria-label="Search address" autocomplete="off">
+    </form>
+    <button id="import" class="dark">Import design</button>
+    <input id="file" type="file" accept=".ifc,.3dm" hidden>
+  </header>
+
+  <main class="layout">
+    <section class="stage" aria-label="Map and 3D view">
+      <div class="seg" role="group" aria-label="View">
+        <button data-view="map" aria-pressed="true">Map</button>
+        <button data-view="3d" aria-pressed="false">3D</button>
+      </div>
+      <div id="map"></div>
+      <div id="viewer" hidden></div>
+      <div id="loading" class="loading">Loading…</div>
+    </section>
+
+    <aside class="panel">
+      <div id="panel" class="panel-body"></div>
+      <div id="chat" class="chat" aria-live="polite"></div>
+      <form id="ask" class="ask">
+        <button type="button" id="attach" class="round" title="Attach a model (IFC or .3dm)" aria-label="Attach a model">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M21 11.5l-8.5 8.5a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8"/></svg>
+        </button>
+        <input name="q" placeholder="Start asking…" autocomplete="off" aria-label="Ask a question">
+        <button type="submit" class="round" aria-label="Send">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+        </button>
+      </form>
+    </aside>
+  </main>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

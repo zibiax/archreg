@@ -1,0 +1,7 @@
+.git
+.github
+.claude
+.env
+web/wasm
+docs
+**/*_test.go
