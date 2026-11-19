@@ -81,17 +81,17 @@ Every check ends in one of four states:
 
 | State | Meaning |
 |---|---|
-| ✅ Pass | The model meets the rule |
-| ❌ Fail | The model breaks the rule — shows by how much, and where |
-| 👁 Check manually | The rule needs human judgement (for example *"anpassas till omgivningen"*) |
-| ❔ Missing data | The model lacks what's needed (for example no rooms in the IFC) |
+| Pass | The model meets the rule |
+| Fail | The model breaks the rule — shows by how much, and where |
+| Check manually | The rule needs human judgement (for example *"anpassas till omgivningen"*) |
+| Missing data | The model lacks what's needed (for example no rooms in the IFC) |
 
 The app must **never show a pass it can't back up**. When it's unsure, it says so.
 
 ### Questions (chat panel)
 The *Start asking…* field lets users ask things like *"Why does my window fail?"* or *"What does e1 mean in this plan?"*.
 
-> ⚠️ **Open question:** a real AI assistant needs a language model API, which means an API key and therefore a server (see [API keys](#api-keys-and-why-there-is-no-runtime-backend)). Options:
+> **Open question:** a real AI assistant needs a language model API, which means an API key and therefore a server (see [API keys](#api-keys-and-why-there-is-no-runtime-backend)). Options:
 > 1. Rule-based answers only: explain any check or plan regulation from the data the app already has. Works fully static.
 > 2. Add a small serverless function that holds the LLM key. Breaks the "no backend" goal.
 > 3. Treat it as a design concept in the prototype and test it with a Wizard-of-Oz setup.

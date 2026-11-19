@@ -231,9 +231,6 @@ func (a *App) elementNames() map[string]string {
 var tmplFS embed.FS
 
 var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
-	"icon": func(s rules.Status) string {
-		return map[rules.Status]string{rules.Pass: "✅", rules.Fail: "❌", rules.Manual: "👁", rules.Missing: "❔"}[s]
-	},
 	"statusText": func(s rules.Status) string {
 		return map[rules.Status]string{rules.Pass: "Pass", rules.Fail: "Fail", rules.Manual: "Check manually", rules.Missing: "Missing data"}[s]
 	},

@@ -161,10 +161,10 @@
   <p><button class="primary" data-action="import">Import design</button> <button data-action="sample">Try the sample building</button></p></div>
 {{else}}
   <div class="summary">
-    <span class="s-fail">❌ {{count .Counts "fail"}} fail</span>
-    <span class="s-manual">👁 {{count .Counts "manual"}} check manually</span>
-    <span class="s-missing">❔ {{count .Counts "missing"}} missing data</span>
-    <span class="s-pass">✅ {{count .Counts "pass"}} pass</span>
+    <span class="s-fail"><i class="dot"></i>{{count .Counts "fail"}} fail</span>
+    <span class="s-manual"><i class="dot"></i>{{count .Counts "manual"}} check manually</span>
+    <span class="s-missing"><i class="dot"></i>{{count .Counts "missing"}} missing data</span>
+    <span class="s-pass"><i class="dot"></i>{{count .Counts "pass"}} pass</span>
   </div>
   {{if not .Pin}}<p class="note">No site selected — drop a pin to check the detaljplan too.</p>{{end}}
   {{if .Plan0}}<h3>Detaljplan</h3><ul class="results">{{range .Plan0}}{{template "row" .}}{{end}}</ul>{{end}}
@@ -177,7 +177,7 @@
 {{define "row"}}
 <li class="result st-{{.R.Status}} {{if .Selected}}open{{end}}">
   <button class="row" data-action="select" data-value="{{.I}}" aria-expanded="{{.Selected}}">
-    <span class="ic" title="{{statusText .R.Status}}">{{icon .R.Status}}</span>
+    <span class="ic" title="{{statusText .R.Status}}" aria-label="{{statusText .R.Status}}"></span>
     <span class="t"><b>{{.R.Title}}</b>{{if .R.Draft}} <span class="chip draft">draft rule</span>{{end}}<br><span class="small">{{.R.Message}}</span></span>
   </button>
   {{if .Selected}}

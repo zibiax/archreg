@@ -89,7 +89,7 @@ func (a *App) answer(q string) string {
 			}
 		}
 		if fails == 0 {
-			return "Nothing fails right now. Some things still need checking by hand — see the 👁 items in Results."
+			return "Nothing fails right now. Some things still need checking by hand — see the items marked “check manually” in Results."
 		}
 		return fmt.Sprintf("%d checks fail. Open the Results tab and click one to see the rule text and source, or ask about something specific, e.g. \"why does the window fail?\".", fails)
 	}
