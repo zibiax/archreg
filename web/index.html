@@ -28,7 +28,9 @@
       <span class="name">[App name]</span>
     </div>
     <form id="search" class="search" role="search">
-      <input name="q" type="search" placeholder="Search address, e.g. Valhallavägen 201" aria-label="Search address" autocomplete="off">
+      <input name="q" type="search" placeholder="Search address, place or coordinates" aria-label="Search address, place or coordinates"
+        autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggest">
+      <ul id="suggest" class="suggest" role="listbox" aria-label="Suggestions" hidden></ul>
     </form>
     <button id="import" class="dark">Import design</button>
     <input id="file" type="file" accept=".ifc,.3dm" hidden>

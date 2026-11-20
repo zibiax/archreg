@@ -300,7 +300,7 @@ Any key used by code running in the browser can be read by the user: it shows up
 - **No secret keys in the app.** Ever.
 - Keys live only in the **build script** (as GitHub Actions secrets), which fetches data and publishes plain static files.
 - If something must be fetched live with a key (the Lantmäteriet map, an LLM for the chat), it goes through a small proxy that holds the key. That's the only server-side code, and it's optional (not built yet).
-- Address search and reverse geocoding use OpenStreetMap's Nominatim (no key, light interactive use only).
+- Address search uses [Photon](https://photon.komoot.io) (OpenStreetMap, no key, built for search-as-you-type) for suggestions. Nominatim is the fallback for submitted searches and does the reverse lookup when you click the map; its usage policy forbids autocomplete, so it never gets keystrokes. The search box also takes coordinates: WGS84 (`59.3468, 18.0835`) or SWEREF 99 TM (`674800 6582000`).
 
 ---
 

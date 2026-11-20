@@ -46,9 +46,30 @@ func main() {
 		}
 		return promise(func() (any, error) { return viewJSON(a.Viewport(v[0], v[1], v[2], v[3], v[4])) })
 	}))
+	// search(q, biasLon, biasLat) → View
 	api.Set("search", js.FuncOf(func(this js.Value, args []js.Value) any {
-		q := args[0].String()
-		return promise(func() (any, error) { return viewJSON(a.Search(q)) })
+		q, lon, lat := str(args, 0), num(args, 1), num(args, 2)
+		return promise(func() (any, error) { return viewJSON(a.Search(q, lon, lat)) })
+	}))
+	// suggest(q, biasLon, biasLat) → JSON array of app.Place
+	api.Set("suggest", js.FuncOf(func(this js.Value, args []js.Value) any {
+		q, lon, lat := str(args, 0), num(args, 1), num(args, 2)
+		return promise(func() (any, error) {
+			ps, err := app.Suggest(q, lon, lat)
+			if err != nil {
+				return nil, err
+			}
+			if ps == nil {
+				ps = []app.Place{}
+			}
+			b, err := json.Marshal(ps)
+			return string(b), err
+		})
+	}))
+	// goTo(lon, lat, zoom, label) → View
+	api.Set("goTo", js.FuncOf(func(this js.Value, args []js.Value) any {
+		lon, lat, zoom, label := num(args, 0), num(args, 1), num(args, 2), str(args, 3)
+		return promise(func() (any, error) { return viewJSON(a.GoTo(lon, lat, zoom, label)) })
 	}))
 	api.Set("moveModel", js.FuncOf(func(this js.Value, args []js.Value) any {
 		lon, lat := args[0].Float(), args[1].Float()
@@ -112,6 +133,13 @@ func str(args []js.Value, i int) string {
 		return args[i].String()
 	}
 	return ""
+}
+
+func num(args []js.Value, i int) float64 {
+	if i < len(args) && args[i].Type() == js.TypeNumber {
+		return args[i].Float()
+	}
+	return 0
 }
 
 func viewJSON(v *app.View) (any, error) {

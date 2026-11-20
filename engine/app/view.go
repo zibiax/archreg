@@ -58,6 +58,10 @@ func (a *App) view() *View {
 		v.Map.Pin = []float64{a.Pin.Lon, a.Pin.Lat}
 	}
 	v.Map.FlyTo, a.flyTo = a.flyTo, nil
+	if a.toast != "" && v.Error == "" {
+		v.Error = a.toast
+	}
+	a.toast = ""
 	sel := a.plan()
 	var pf []map[string]any
 	seen := map[string]bool{}

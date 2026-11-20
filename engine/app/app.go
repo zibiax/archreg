@@ -71,6 +71,7 @@ type App struct {
 
 	// One-shot instructions for the JS side.
 	flyTo    []float64
+	toast    string
 	focus    string
 	newMesh  bool
 	fitModel bool
@@ -125,8 +126,11 @@ func (a *App) Init() *View {
 	return a.view()
 }
 
-// DropPin selects a site.
-func (a *App) DropPin(lon, lat float64) *View {
+// DropPin selects a site where the user clicked the map.
+func (a *App) DropPin(lon, lat float64) *View { return a.dropPin(lon, lat, "") }
+
+// dropPin selects a site; an empty address is looked up.
+func (a *App) dropPin(lon, lat float64, addr string) *View {
 	e, n := geo.ToSweref(lon, lat)
 	a.mu.Lock()
 	a.Pin = &Pin{Lon: lon, Lat: lat, E: e, N: n, Address: "Looking up address…"}
@@ -135,7 +139,9 @@ func (a *App) DropPin(lon, lat float64) *View {
 	a.mu.Unlock()
 
 	ps, err := a.store.At(e, n)
-	addr := reverseGeocodeFn(lon, lat)
+	if addr == "" {
+		addr = reverseGeocodeFn(lon, lat)
+	}
 
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -170,22 +176,6 @@ func (a *App) Viewport(minLon, minLat, maxLon, maxLat, zoom float64) *View {
 	defer a.mu.Unlock()
 	a.Outlines = ps
 	return a.view()
-}
-
-// Search geocodes an address and drops a pin there.
-func (a *App) Search(q string) *View {
-	lon, lat, err := geocode(q)
-	if err != nil {
-		a.mu.Lock()
-		a.Chat = append(a.Chat, ChatMsg{"app", "I couldn't find \"" + q + "\": " + err.Error()})
-		v := a.view()
-		a.mu.Unlock()
-		return v
-	}
-	a.mu.Lock()
-	a.flyTo = []float64{lon, lat, 17}
-	a.mu.Unlock()
-	return a.DropPin(lon, lat)
 }
 
 // LoadModel ingests a model from a loader.

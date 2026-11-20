@@ -264,9 +264,98 @@ $("#panel").addEventListener("input", async (e) => {
   } finally { liveBusy = false; }
 });
 
-$("#search").addEventListener("submit", (e) => {
+// ------------------------------------------------------ search + suggest ----
+// Go does the geocoding (engine/app/search.go); this only draws the list.
+const search = { form: $("#search"), input: $("#search input"), list: $("#suggest"),
+  places: [], active: -1, seq: 0, timer: null };
+
+function setBusy(on) { search.form.classList.toggle("busy", on); search.input.setAttribute("aria-busy", on); }
+
+function closeSuggest() {
+  search.list.hidden = true; search.list.replaceChildren(); search.places = []; search.active = -1;
+  search.input.setAttribute("aria-expanded", "false"); search.input.removeAttribute("aria-activedescendant");
+}
+
+function renderSuggest(places, q) {
+  search.places = places; search.active = -1;
+  search.list.replaceChildren();
+  if (!places.length) {
+    const li = document.createElement("li"); li.className = "none";
+    li.textContent = `No matches for “${q}”`;
+    search.list.append(li);
+  }
+  places.forEach((p, i) => {
+    const li = document.createElement("li");
+    li.id = "sg-" + i; li.setAttribute("role", "option"); li.dataset.i = i;
+    const b = document.createElement("b"); b.textContent = p.label;
+    const s = document.createElement("span"); s.textContent = p.detail;
+    li.append(b, s);
+    search.list.append(li);
+  });
+  search.list.hidden = false; search.input.setAttribute("aria-expanded", "true");
+}
+
+function setActive(i) {
+  const n = search.places.length; if (!n) return;
+  search.active = (i + n) % n;
+  [...search.list.children].forEach((li, j) => li.setAttribute("aria-selected", j === search.active));
+  search.input.setAttribute("aria-activedescendant", "sg-" + search.active);
+  search.list.children[search.active].scrollIntoView({ block: "nearest" });
+}
+
+async function choose(p) {
+  closeSuggest();
+  search.input.value = p.detail && p.kind !== "coordinate" ? `${p.label}, ${p.detail}` : p.label;
+  search.input.blur();
+  await call("goTo", p.lon, p.lat, p.zoom, search.input.value);
+}
+
+search.input.addEventListener("input", () => {
+  clearTimeout(search.timer);
+  const q = search.input.value.trim();
+  if (q.length < 2) { search.seq++; setBusy(false); closeSuggest(); return; }
+  search.timer = setTimeout(async () => {
+    const seq = ++search.seq; setBusy(true);
+    try {
+      const c = map.getCenter();
+      const places = JSON.parse(await archreg.suggest(q, c.lng, c.lat));
+      if (seq === search.seq && document.activeElement === search.input) renderSuggest(places, q);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      if (seq === search.seq) setBusy(false);
+    }
+  }, 250);
+});
+
+search.input.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowDown") { e.preventDefault(); if (search.list.hidden) search.input.dispatchEvent(new Event("input")); else setActive(search.active + 1); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); setActive(search.active - 1); }
+  else if (e.key === "Escape") { if (!search.list.hidden) { e.preventDefault(); closeSuggest(); } }
+});
+
+// mousedown, not click: picking must happen before the input's blur closes the list.
+search.list.addEventListener("mousedown", (e) => {
   e.preventDefault();
-  const q = e.target.q.value.trim(); if (q) call("search", q);
+  const li = e.target.closest("li[data-i]");
+  if (li) choose(search.places[+li.dataset.i]);
+});
+search.list.addEventListener("mousemove", (e) => {
+  const li = e.target.closest("li[data-i]");
+  if (li && +li.dataset.i !== search.active) setActive(+li.dataset.i);
+});
+search.input.addEventListener("blur", () => setTimeout(closeSuggest, 100));
+
+search.form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  clearTimeout(search.timer); search.seq++;
+  const q = search.input.value.trim(); if (!q) return;
+  if (search.active >= 0 && search.places[search.active]) return choose(search.places[search.active]);
+  closeSuggest(); setBusy(true);
+  try {
+    const c = map.getCenter();
+    await call("search", q, c.lng, c.lat);
+  } finally { setBusy(false); }
 });
 $("#ask").addEventListener("submit", (e) => {
   e.preventDefault();
