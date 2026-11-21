@@ -222,6 +222,8 @@ func TestRuleSet(t *testing.T) {
 		"bfs2024-12.elevator.tall":          nil,
 		"bfs2024-7.escapeWindow":            {Fail}, // 0.5+0.6 < 1.5
 		"bfs2024-9.window.childSafety":      {Manual, Pass},
+		"bfs2024-9.window.safetyGlass":      {Manual, Pass},   // W2 sill 0.4 < 0.6
+		"bfs2024-11.kitchen":                {Manual},         // no kitchen room → check by hand
 		"bfs2024-8.ceilingHeight":           {Manual, Manual}, // reference value only
 		"bfs2026-4.bikeParking":             {Fail},
 		"bfs2026-4.charging.apartments":     {Manual}, // necessary only

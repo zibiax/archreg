@@ -1,8 +1,8 @@
 {
   "id": "boverket-2026",
   "name": "Boverkets byggregler i kraft november 2026 (BFS 2024:6–13, BFS 2026:4, BFS 2026:9)",
-  "version": "2026.11.17",
-  "notes": "Requirements quoted from the official BFS PDFs at rinfo.boverket.se, fetched 2026-11-17. Includes BFS 2025:10 (amends BFS 2024:7, in force 2025-12-01; the amended paragraphs don't affect the rules here), BFS 2026:4 hållbar mobilitet (in force 2026-07-01) and BFS 2026:9 energihushållning (in force 2026-10-01, repeals BBR). Building 'use' values: house (en- och tvåbostadshus), apartments (flerbostadshus), nonResidential (lokalbyggnad).",
+  "version": "2026.11.21",
+  "notes": "Requirements quoted from the official BFS PDFs at rinfo.boverket.se, fetched 2026-11-17. Includes BFS 2025:10 (amends BFS 2024:7, in force 2025-12-01; the amended paragraphs don't affect the rules here), BFS 2026:4 hållbar mobilitet (in force 2026-07-01) and BFS 2026:9 energihushållning (in force 2026-10-01, repeals BBR). Re-verified 2026-11-21: every quoted text matches the PDFs; amendments BFS 2025:10 (2024:7 2 kap. 6–8 §§, 5 kap. 21 §, 6 kap. 10 §), BFS 2026:6 (2024:4 1 §) and BFS 2026:13–17 (energy, 2027–2033) don't change any paragraph checked here. Building 'use' values: house (en- och tvåbostadshus), apartments (flerbostadshus), nonResidential (lokalbyggnad).",
   "rules": [
     {
       "id": "bfs2024-11.hygiene.room",
@@ -16,6 +16,21 @@
       "source": { "title": "BFS 2024:11 Bostäders lämplighet för sitt ändamål", "section": "2 kap. 3 §", "url": "https://rinfo.boverket.se/BFS2024-11/pdf/BFS2024-11.pdf" },
       "verified": true,
       "notes": "Checked for the whole model. In a multi-dwelling model each dwelling needs its own (or shared per 2 kap. 8 §)."
+    },
+    {
+      "id": "bfs2024-11.kitchen",
+      "title": "Dwelling has a space for cooking",
+      "short": "Kitchen",
+      "sv": {"title": "Bostaden har utrymme för matlagning", "short": "Kök", "failHint": "Ett kök i vardagsrummet räknas också. Markera då rummet som kök, eller kontrollera att det finns fast inredning för matlagning. I bostäder med boendeenheter får matlagningen delas av högst tolv personer."},
+      "appliesTo": "building",
+      "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
+      "check": { "property": "kitchenCount", "op": ">=", "value": 1 },
+      "onFail": "manual",
+      "failHint": "An open-plan kitchen in the living room counts too. Mark that room as a kitchen, or check that there are fixed fittings for cooking. In dwellings with shared units, cooking may be shared by at most twelve people.",
+      "text": "Ett utrymme för bostadsfunktionen matlagning ska ha fast inredning och utrustning för matlagning.",
+      "source": { "title": "BFS 2024:11 Bostäders lämplighet för sitt ändamål", "section": "3 kap. 3 §, 2 kap. 1 §", "url": "https://rinfo.boverket.se/BFS2024-11/pdf/BFS2024-11.pdf" },
+      "verified": true,
+      "notes": "Matlagning is one of the bostadsfunktioner every dwelling must be designed for (2 kap. 1 §). It can be shared in dwellings with boendeenheter (2 kap. 7 §), so a missing kitchen is 'check manually', not a fail."
     },
     {
       "id": "bfs2024-12.bathroom.turning",
@@ -179,6 +194,21 @@
       "verified": true
     },
     {
+      "id": "bfs2024-9.window.safetyGlass",
+      "title": "Low glass in dwellings needs safety glass",
+      "short": "Safety glass, low windows",
+      "sv": {"title": "Lågt sittande glas i bostäder kräver säkerhetsglas", "short": "Säkerhetsglas, låga fönster", "failHint": "Glas som sitter lägre än 0,6 m över golvet i en bostad ska ha en brottkaraktär som begränsar risken för skärskador, eller ett permanent skydd. Är fallhöjden mer än 2,0 m ska glaset också förhindra fall genom glasytan (30 §)."},
+      "appliesTo": "window",
+      "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
+      "check": { "property": "sillHeight", "op": ">=", "value": 0.60, "unit": "m" },
+      "onFail": "manual",
+      "failHint": "Glass less than 0.6 m above the floor in a dwelling needs a break pattern that limits cuts (e.g. laminated or toughened glass) or a permanent guard. If the fall height is over 2.0 m, the glass must also stop a person falling through (30 §).",
+      "text": "Glasytor som är placerade och utformade så att det finns risk för skärskador ska ha 1. en brottkaraktär som begränsar risken för skärskador, eller 2. permanent skydd som förhindrar sammanstötning med glaset. Kravet i första stycket gäller för glasytor som sitter lägre över golvet eller marken än […] 2. 0,6 meter i bostadslägenheter,",
+      "source": { "title": "BFS 2024:9 Säkerhet vid användning", "section": "2 kap. 31 §, 30 §", "url": "https://rinfo.boverket.se/BFS2024-9/pdf/BFS2024-9.pdf" },
+      "verified": true,
+      "notes": "Uses the sill height as the height of the lowest glass. Entrances and communication spaces have a 1.5 m limit, which isn't modelled."
+    },
+    {
       "id": "bfs2024-8.ceilingHeight",
       "title": "Room height",
       "short": "Room height",
@@ -279,9 +309,9 @@
       "id": "bfs2026-9.energy",
       "title": "Energy performance",
       "short": "Energy",
-      "sv": {"title": "Energiprestanda", "short": "Energi", "manual": "Energikraven (BFS 2026:9, gäller från 1 oktober 2026 och ersätter BBR avsnitt 9) kräver en energiberäkning och kan inte kontrolleras från modellen. BBR får fortfarande användas för bygglovsansökningar som lämnas in före 1 oktober 2027."},
+      "sv": {"title": "Energiprestanda", "short": "Energi", "manual": "Energikraven (BFS 2026:9, gäller från 1 oktober 2026 och ersätter BBR avsnitt 9) kräver en energiberäkning och kan inte kontrolleras från modellen. BBR får fortfarande användas för bygglovsansökningar som lämnas in före 1 oktober 2027. Ändringarna BFS 2026:13–17 skärper kraven stegvis från 1 januari 2027 till 1 januari 2033."},
       "appliesTo": "building",
-      "manual": "Energy requirements (BFS 2026:9, in force 1 October 2026, replacing BBR chapter 9) need an energy calculation and can't be checked from the model. BBR may still be used for bygglov applications submitted before 1 October 2027.",
+      "manual": "Energy requirements (BFS 2026:9, in force 1 October 2026, replacing BBR chapter 9) need an energy calculation and can't be checked from the model. BBR may still be used for bygglov applications submitted before 1 October 2027. Amendments BFS 2026:13–17 tighten the requirements in steps from 1 January 2027 to 1 January 2033.",
       "source": { "title": "BFS 2026:9 Energihushållning och värmeisolering i byggnader", "url": "https://rinfo.boverket.se/BFS2026-9/pdf/BFS2026-9.pdf" },
       "verified": true
     }
