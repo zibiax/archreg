@@ -53,3 +53,53 @@ func Describe(r PlanRegulation) (kind, plain string) {
 	}
 	return string(k), plain
 }
+
+// Short is a few words for compact lists: "Ridge ≤ 16 m", "No building".
+func Short(r PlanRegulation) string {
+	v, hasV := regValue(r)
+	val := func(op, unit string) string {
+		if !hasV {
+			return ""
+		}
+		s := " " + op + " " + fmtNum(v)
+		if unit != "" {
+			s += " " + unit
+		}
+		return s
+	}
+	sea := ""
+	if isAbsoluteHeight(r) {
+		sea = " above sea level"
+	}
+	switch classify(r) {
+	case kindPrickmark:
+		return "No building (prickmark)"
+	case kindKorsmark:
+		return "Outbuildings only (korsmark)"
+	case kindRidgeHeight:
+		return "Ridge height" + val("≤", "m") + sea
+	case kindTotalHeight:
+		return "Total height" + val("≤", "m") + sea
+	case kindBuildingHeight:
+		return "Building height" + val("≤", "m") + sea
+	case kindBuildingArea:
+		if isPercent(r) {
+			return "Footprint" + val("≤", "% of plot")
+		}
+		return "Footprint" + val("≤", "m²")
+	case kindFloorArea:
+		return "Floor area" + val("≤", "m²")
+	case kindStoreys:
+		return "Storeys" + val("≤", "")
+	case kindBoundaryDist:
+		return "To boundary" + val("≥", "m")
+	}
+	if isUse(r) {
+		return "Use: " + r.Text
+	}
+	t := []rune(r.Text)
+	if len(t) > 48 {
+		return string(t[:46]) + "…"
+	}
+	return r.Text
+}

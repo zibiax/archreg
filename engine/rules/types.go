@@ -128,6 +128,9 @@ type Result struct {
 	Measured     *float64 `json:"measured,omitempty"`
 	Required     *float64 `json:"required,omitempty"`
 	Unit         string   `json:"unit,omitempty"`
+	Op           string   `json:"op,omitempty"`    // how Measured must compare to Required: >=, <=, ==
+	What         string   `json:"what,omitempty"`  // what Measured is: "width plus height", "nockhöjd"
+	Short        string   `json:"short,omitempty"` // a few words for compact lists: "Escape window"
 	Source       Source   `json:"source"`
 	Text         string   `json:"text,omitempty"`         // the regulation text, quoted
 	Draft        bool     `json:"draft,omitempty"`        // rule values not verified against the regulation text
@@ -154,7 +157,8 @@ type RuleSet struct {
 type Rule struct {
 	ID        string `json:"id"`
 	Title     string `json:"title"`
-	AppliesTo string `json:"appliesTo"` // "room", "window", "door" or "building"
+	Short     string `json:"short,omitempty"` // a few words for compact lists
+	AppliesTo string `json:"appliesTo"`       // "room", "window", "door" or "building"
 	// Where filters elements by equality (case-insensitive for strings).
 	Where map[string][]any `json:"where,omitempty"`
 	// When are conditions on the building ("use", "storeys", ...) that must

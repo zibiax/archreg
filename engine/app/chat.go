@@ -50,8 +50,9 @@ func (a *App) answer(q string) string {
 	if why && a.Output != nil {
 		// Look for a result mentioning a word from the question.
 		var hits []rules.Result
+		seen := map[string]bool{} // one answer per Issues row, not per window
 		for _, r := range a.Output.Results {
-			if r.Status != rules.Fail && r.Status != rules.Missing {
+			if r.Status != rules.Fail && r.Status != rules.Missing || seen[issueKey(r)] {
 				continue
 			}
 			text := strings.ToLower(r.Title + " " + r.Message)
@@ -59,6 +60,7 @@ func (a *App) answer(q string) string {
 				w = strings.Trim(w, "?.,!\"")
 				if len(w) >= 4 && w != "does" && w != "fail" && w != "fails" && w != "varför" && strings.Contains(text, strings.TrimSuffix(w, "s")) {
 					hits = append(hits, r)
+					seen[issueKey(r)] = true
 					break
 				}
 			}
@@ -78,7 +80,12 @@ func (a *App) answer(q string) string {
 				if i > 0 {
 					b.WriteString(" ")
 				}
-				fmt.Fprintf(&b, "%s: %s (%s%s).", r.Title, r.Message, r.Source.Title, sect(r.Source.Section))
+				name := r.Short
+				if name == "" {
+					name = r.Title
+				}
+				fmt.Fprintf(&b, "%s: %s", name, r.Message)
+				fmt.Fprintf(&b, " [%s%s]", r.Source.Title, sect(r.Source.Section))
 			}
 			return b.String()
 		}
@@ -89,9 +96,9 @@ func (a *App) answer(q string) string {
 			}
 		}
 		if fails == 0 {
-			return "Nothing fails right now. Some things still need checking by hand — see the items marked “check manually” in Results."
+			return "Nothing fails. Some things still need checking by hand: see Issues."
 		}
-		return fmt.Sprintf("%d checks fail. Open the Results tab and click one to see the rule text and source, or ask about something specific, e.g. \"why does the window fail?\".", fails)
+		return fmt.Sprintf("%d things fail: see Issues, or ask about one, e.g. \"why does the window fail?\".", fails)
 	}
 
 	for _, g := range glossary {

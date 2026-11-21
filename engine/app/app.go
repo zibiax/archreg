@@ -104,7 +104,7 @@ func New(base string, rulesJSON []byte) (*App, error) {
 	a := &App{base: u, ruleset: &rs, Tab: "site", Selected: -1,
 		layerKinds: map[string]string{}, roomType: map[string]string{}, escape: map[string]bool{}, external: map[string]bool{}}
 	a.store = plans.NewStore(func(name string) ([]byte, error) { return a.get("data/plans/" + name) })
-	a.Chat = []ChatMsg{{From: "app", Text: "Hi! Drop a pin on the map or search for an address. Import a model (IFC or .3dm) — or try the sample building — and I'll check it. Ask me things like \"why does my window fail?\" or \"what is prickmark?\""}}
+	a.Chat = []ChatMsg{{From: "app", Text: "Ask about a failure (\"why does my window fail?\"), a plan label (\"what is e1?\") or a word (\"prickmark\")."}}
 	return a, nil
 }
 
@@ -153,9 +153,16 @@ func (a *App) dropPin(lon, lat float64, addr string) *View {
 	if err != nil {
 		a.lastError = "Couldn't load plan data: " + err.Error()
 	}
-	// Move an unplaced model to the pin.
-	if a.Building != nil && a.Placement == nil {
-		a.Placement = &ingest.Placement{E: e, N: n}
+	// The building comes along to a new site: an unplaced model goes to
+	// the pin, and so does a placed one when the pin is on another site
+	// (clicks near it, e.g. to read the plan, leave it where it is).
+	if a.Building != nil {
+		switch {
+		case a.Placement == nil:
+			a.Placement = &ingest.Placement{E: e, N: n}
+		case math.Hypot(a.Placement.E-e, a.Placement.N-n) > newSiteDistance:
+			a.Placement = &ingest.Placement{E: e, N: n, RotationDeg: a.Placement.RotationDeg}
+		}
 	}
 	a.recheck()
 	return a.view()
@@ -328,6 +335,11 @@ func (a *App) Action(name, value, id string) *View {
 		if a.Placement != nil && f() != nil {
 			a.Placement.RotationDeg = *f()
 		}
+	case "reset-placement":
+		// Back to the pin, unrotated.
+		if a.Pin != nil && a.Building != nil {
+			a.Placement = &ingest.Placement{E: a.Pin.E, N: a.Pin.N}
+		}
 	case "place-at-pin":
 		if a.Pin != nil && a.Building != nil {
 			rot := 0.0
@@ -387,6 +399,10 @@ func (a *App) Action(name, value, id string) *View {
 	a.recheck()
 	return a.view()
 }
+
+// newSiteDistance: a pin farther than this (metres) from the building
+// counts as a different site, and the building moves to it.
+const newSiteDistance = 150
 
 // Replaceable in tests.
 var reverseGeocodeFn = reverseGeocode

@@ -169,7 +169,11 @@ func (a *App) view() *View {
 	// 3D.
 	if a.Building != nil || a.newMesh {
 		m := &Model3D{Rebuild: a.newMesh && a.Building != nil, Clear: a.Building == nil, Fit: a.fitModel, Highlight: []string{}}
-		if r := a.selectedResult(); r != nil && r.Group == rules.GroupRegulations {
+		// Highlight every element in the selected row (all three windows).
+		for _, r := range a.selectedIssue() {
+			if r.Group != rules.GroupRegulations {
+				continue
+			}
 			for _, id := range r.Elements {
 				if id != "building" {
 					m.Highlight = append(m.Highlight, id)
@@ -238,14 +242,7 @@ func (a *App) selectedResult() *rules.Result {
 // --- template data --------------------------------------------------------
 
 type regRow struct {
-	Label, Plain, Text, Kind string
-}
-
-type resultRow struct {
-	I        int
-	R        rules.Result
-	Selected bool
-	Names    []string
+	Label, Plain, Short, Text, Kind string
 }
 
 type panelData struct {
@@ -264,8 +261,9 @@ type panelData struct {
 	FootArea   float64
 	P          Project
 	Out        *rules.Output
-	Plan0      []resultRow
-	Regs0      []resultRow
+	Sections   []issueSection
+	FailCount  int // rows (not results) that must be fixed
+	NeedsInfo  bool
 	Counts     map[rules.Status]int
 	RoomTypes  []string
 	LayerKinds map[string]string
@@ -281,10 +279,10 @@ func (a *App) panelData() panelData {
 		d.Plan = p
 		for _, r := range p.Regulations {
 			kind, plain := rules.Describe(r)
-			d.Regs = append(d.Regs, regRow{Label: r.Label, Plain: plain, Text: r.Text, Kind: kind})
+			d.Regs = append(d.Regs, regRow{Label: r.Label, Plain: plain, Short: rules.Short(r), Text: r.Text, Kind: kind})
 		}
 		if p.LegallyBinding != "" && p.LegallyBinding < "2011-05-02" {
-			d.ByDate = "Adopted before 2 May 2011: older definitions (ÄPBL) apply, e.g. for byggnadshöjd."
+			d.ByDate = "Pre-2011 plan: older height definitions (ÄPBL) apply."
 		}
 	}
 	if a.Building != nil {
@@ -295,18 +293,17 @@ func (a *App) panelData() panelData {
 	}
 	if a.Output != nil {
 		d.Counts = a.Output.Summary
-		names := a.elementNames()
-		for i, r := range a.Output.Results {
-			row := resultRow{I: i, R: r, Selected: i == a.Selected}
-			for _, id := range r.Elements {
-				if n, ok := names[id]; ok {
-					row.Names = append(row.Names, n)
+		d.Sections = a.issues()
+		for _, sec := range d.Sections {
+			switch sec.Status {
+			case rules.Fail:
+				d.FailCount = len(sec.Issues)
+			case rules.Missing:
+				for _, is := range sec.Issues {
+					if strings.HasPrefix(is.R.RuleID, "bfs") {
+						d.NeedsInfo = true
+					}
 				}
-			}
-			if r.Group == rules.GroupPlan {
-				d.Plan0 = append(d.Plan0, row)
-			} else {
-				d.Regs0 = append(d.Regs0, row)
 			}
 		}
 	}

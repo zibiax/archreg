@@ -366,9 +366,16 @@ function show(view) {
 for (const b of document.querySelectorAll(".seg button")) b.addEventListener("click", () => show(b.dataset.view));
 
 // ---------------------------------------------------------- apply view ----
+let lastTab = "";
 async function apply(v) {
-  const body = $("#panel"); const scroll = body.scrollTop;
-  body.innerHTML = v.panel; body.scrollTop = scroll;
+  // Keep the pane's scroll position across re-renders of the same tab.
+  const old = $("#panel .pane"); const scroll = old && v.tab === lastTab ? old.scrollTop : 0;
+  $("#panel").innerHTML = v.panel;
+  const pane = $("#panel .pane"); if (pane) pane.scrollTop = scroll;
+  const asking = v.tab === "ask";
+  if (asking && lastTab !== "ask") setTimeout(() => $("#ask input").focus(), 0);
+  lastTab = v.tab;
+  $("#askpane").hidden = !asking;
   const chat = $("#chat"); chat.innerHTML = v.chat; chat.scrollTop = chat.scrollHeight;
   if (v.error) toast(v.error);
 
@@ -520,7 +527,6 @@ $("#ask").addEventListener("submit", (e) => {
   e.target.q.value = ""; call("action", "ask", q, "");
 });
 $("#import").addEventListener("click", () => $("#file").click());
-$("#attach").addEventListener("click", () => $("#file").click());
 $("#file").addEventListener("change", async (e) => {
   const f = e.target.files[0]; e.target.value = "";
   if (f) await loadFile(f);

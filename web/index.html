@@ -37,6 +37,20 @@
   </header>
 
   <main class="layout">
+    <aside class="side">
+      <!-- Go renders the menu rail and the pane into #panel (display: contents). -->
+      <div id="panel" class="side-grid"></div>
+      <div id="askpane" class="askpane" hidden>
+        <div id="chat" class="chat" aria-live="polite"></div>
+        <form id="ask" class="ask">
+          <input name="q" placeholder="Why does my window fail?" autocomplete="off" aria-label="Ask a question">
+          <button type="submit" class="round" aria-label="Send">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+          </button>
+        </form>
+      </div>
+    </aside>
+
     <section class="stage" aria-label="Map and 3D view">
       <div class="seg" role="group" aria-label="View">
         <button data-view="map" aria-pressed="true">Map</button>
@@ -46,26 +60,12 @@
       <div id="map"></div>
       <div id="map-legend" class="map-legend" hidden>
         <span><i class="sw env"></i>Plan height limit</span>
-        <span><i class="sw osm"></i>Existing buildings (OpenStreetMap; ones under your model are hidden)</span>
+        <span><i class="sw osm"></i>Existing buildings</span>
         <p id="map-note" class="small" hidden></p>
       </div>
       <div id="viewer" hidden></div>
       <div id="loading" class="loading">Loading…</div>
     </section>
-
-    <aside class="panel">
-      <div id="panel" class="panel-body"></div>
-      <div id="chat" class="chat" aria-live="polite"></div>
-      <form id="ask" class="ask">
-        <button type="button" id="attach" class="round" title="Attach a model (IFC or .3dm)" aria-label="Attach a model">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M21 11.5l-8.5 8.5a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8"/></svg>
-        </button>
-        <input name="q" placeholder="Start asking…" autocomplete="off" aria-label="Ask a question">
-        <button type="submit" class="round" aria-label="Send">
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
-        </button>
-      </form>
-    </aside>
   </main>
   <div id="toast" class="toast" role="status" hidden></div>
 </body>

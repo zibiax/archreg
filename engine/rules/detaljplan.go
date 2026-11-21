@@ -152,8 +152,12 @@ func (c *planContext) result(id, title string, reg PlanRegulation, s Status, msg
 	if reg.Label != "" {
 		src.Section = reg.Label
 	}
+	short := Short(reg)
+	if reg.Label != "" && reg.Label != "prickmark" && reg.Label != "korsmark" {
+		short = reg.Label + " · " + short
+	}
 	return Result{
-		RuleID: id, Group: GroupPlan, Status: s, Title: title, Message: msg,
+		RuleID: id, Group: GroupPlan, Status: s, Title: title, Message: msg, Short: short,
 		Source: src, RegulationID: reg.ID, Elements: []string{"footprint"}, Text: reg.Text,
 	}
 }
@@ -169,6 +173,7 @@ func (c *planContext) withinPlan() (Result, bool) {
 	inside := intersectionArea(c.footprint, bp)
 	r := c.result("dp.withinPlan", "Building inside the plan area", PlanRegulation{}, Pass,
 		"The whole building is inside this plan's area.")
+	r.Short = "Inside plan area"
 	if outside := c.fpArea - inside; outside > 0.01 {
 		r.Status = Manual
 		r.Message = fmt.Sprintf("%.1f m² of the building is outside this plan's area. Another plan (or none) applies there.", outside)
@@ -224,7 +229,7 @@ func (c *planContext) checkRegulation(reg PlanRegulation) Result {
 	switch kind {
 	case kindPrickmark:
 		r := c.result(id, title, reg, Fail, fmt.Sprintf("%.1f m² of the building is on prickmark (land that may not be built on).", ov))
-		r.Measured, r.Required, r.Unit = ptr(round(ov, 1)), ptr(0), "m²"
+		r.Measured, r.Required, r.Unit, r.Op, r.What = ptr(round(ov, 1)), ptr(0), "m²", "==", "area on prickmark"
 		if c.approx {
 			r.Status = Manual
 			r.Message += " The footprint is approximate (" + c.model.FootprintMethod + "), so check the real outline."
@@ -341,7 +346,11 @@ func (c *planContext) compare(id, title string, reg PlanRegulation, v float64, u
 		word = "minimum"
 	}
 	r := c.result(id, title, reg, Pass, fmt.Sprintf("%s %s %s, %s %s %s.", what, fmtNum(v), unit, word, fmtNum(limit), unit))
-	r.Measured, r.Required, r.Unit = ptr(round(v, 2)), ptr(limit), unit
+	r.Measured, r.Required, r.Unit, r.What = ptr(round(v, 2)), ptr(limit), unit, strings.ToLower(what)
+	r.Op = "<="
+	if min {
+		r.Op = ">="
+	}
 	if !pass {
 		r.Status = Fail
 		r.Message = fmt.Sprintf("%s %s %s, %s %s %s (%s %s too %s).", what, fmtNum(v), unit, word, fmtNum(limit), unit,

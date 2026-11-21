@@ -22,11 +22,13 @@ type outcome struct {
 	measured *float64
 	required *float64
 	unit     string
+	op       string
+	what     string
 }
 
 func checkRule(m *Model, building Element, rule Rule) []Result {
 	base := Result{
-		RuleID: rule.ID, Group: GroupRegulations, Title: rule.Title,
+		RuleID: rule.ID, Group: GroupRegulations, Title: rule.Title, Short: rule.Short,
 		Source: rule.Source, Draft: !rule.Verified, Text: rule.Text,
 	}
 	res := func(s Status, msg string, elems []string) Result {
@@ -140,7 +142,7 @@ func checkRule(m *Model, building Element, rule Rule) []Result {
 			return []Result{res(Manual, fmt.Sprintf("No %s can be confirmed to meet this rule from the model's data. Check by hand.", noun), manual)}
 		case len(failed) > 0 && len(missing) == 0:
 			r := res(Fail, fmt.Sprintf("None of the %d %ss meets this rule. For example: %s", len(failed), noun, firstFail.msg), failed)
-			r.Required, r.Unit = firstFail.required, firstFail.unit
+			r.Measured, r.Required, r.Unit, r.Op, r.What = firstFail.measured, firstFail.required, firstFail.unit, firstFail.op, firstFail.what
 			if rule.OnFail == "manual" {
 				r.Status = Manual
 				r.Message += " " + rule.FailHint
@@ -172,7 +174,7 @@ func checkRule(m *Model, building Element, rule Rule) []Result {
 			}
 		}
 		r := res(o.status, o.msg, []string{elemID(ev.e)})
-		r.Measured, r.Required, r.Unit = o.measured, o.required, o.unit
+		r.Measured, r.Required, r.Unit, r.Op, r.What = o.measured, o.required, o.unit, o.op, o.what
 		out = append(out, r)
 	}
 	if len(passed) > 0 {
@@ -224,12 +226,13 @@ func evalCondition(e Element, c Condition) outcome {
 	if !ok {
 		return outcome{status: Manual, msg: "rule value for " + prop + " isn't a number."}
 	}
-	o := outcome{required: ptr(want), unit: c.Unit}
+	o := outcome{required: ptr(want), unit: c.Unit, op: c.Op, what: prop}
 	v, ok := number(e, c.Property)
 	if !ok {
 		if c.Upper != "" {
 			if up, ok := number(e, c.Upper); ok {
 				o.measured = ptr(round(up, 2))
+				o.what = humanProp(c.Upper)
 				if (c.Op == ">=" || c.Op == ">") && !compareOp(up, c.Op, want) {
 					o.status = Fail
 					o.msg = fmt.Sprintf("%s is %s %s, so the %s is certainly below %s %s.", humanProp(c.Upper), fmtNum(up), c.Unit, prop, fmtNum(want), c.Unit)

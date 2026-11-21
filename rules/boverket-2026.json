@@ -7,6 +7,7 @@
     {
       "id": "bfs2024-11.hygiene.room",
       "title": "Dwelling has a room for personal hygiene",
+      "short": "Bathroom in dwelling",
       "appliesTo": "building",
       "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
       "check": { "property": "bathroomCount", "op": ">=", "value": 1 },
@@ -18,6 +19,7 @@
     {
       "id": "bfs2024-12.bathroom.turning",
       "title": "Accessible bathroom: room for a 1.30 m turning circle",
+      "short": "Bathroom turning circle",
       "appliesTo": "room",
       "where": { "type": ["bathroom"] },
       "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
@@ -32,6 +34,7 @@
     {
       "id": "bfs2024-12.door.entrance.dwelling",
       "title": "Entrance door clear width (dwelling)",
+      "short": "Entrance door width",
       "appliesTo": "door",
       "where": { "isExternal": [true] },
       "when": [{ "property": "use", "op": "in", "value": ["house"] }],
@@ -44,6 +47,7 @@
     {
       "id": "bfs2024-12.door.entrance",
       "title": "Entrance door clear width",
+      "short": "Entrance door width",
       "appliesTo": "door",
       "where": { "isExternal": [true] },
       "when": [{ "property": "use", "op": "in", "value": ["apartments", "nonResidential"] }],
@@ -56,6 +60,7 @@
     {
       "id": "bfs2024-12.door.interior",
       "title": "Interior door clear width (if it must be accessible)",
+      "short": "Interior door width",
       "appliesTo": "door",
       "where": { "isExternal": [false] },
       "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
@@ -69,6 +74,7 @@
     {
       "id": "bfs2024-9.door.freeHeight",
       "title": "Free height in doors",
+      "short": "Door free height",
       "appliesTo": "door",
       "check": { "property": "clearHeight", "op": ">=", "value": 2.00, "unit": "m", "upper": "height" },
       "text": "Den fria höjden ska vara minst 2,00 meter i utrymningspassager, trappor, dörrar och andra kommunikationsutrymmen.",
@@ -78,6 +84,7 @@
     {
       "id": "bfs2024-12.elevator",
       "title": "Elevator when there are level differences over 1 m",
+      "short": "Lift",
       "appliesTo": "building",
       "when": [
         { "property": "use", "op": "in", "value": ["apartments", "nonResidential"] },
@@ -93,6 +100,7 @@
     {
       "id": "bfs2024-12.elevator.tall",
       "title": "More than one elevator in buildings over ten storeys",
+      "short": "Second lift",
       "appliesTo": "building",
       "when": [{ "property": "storeys", "op": ">", "value": 10 }],
       "check": { "property": "elevators", "op": ">=", "value": 2 },
@@ -103,6 +111,7 @@
     {
       "id": "bfs2024-12.elevator.stretcher",
       "title": "Stretcher transport by elevator (apartments over four storeys)",
+      "short": "Stretcher lift",
       "appliesTo": "building",
       "when": [
         { "property": "use", "op": "in", "value": ["apartments"] },
@@ -116,6 +125,7 @@
     {
       "id": "bfs2024-12.entranceLevel",
       "title": "Entrance level of a multi-level dwelling",
+      "short": "Entrance level",
       "appliesTo": "building",
       "when": [
         { "property": "use", "op": "in", "value": ["house"] },
@@ -129,6 +139,7 @@
     {
       "id": "bfs2024-7.escapeWindow",
       "title": "Escape window (fönster för utrymning)",
+      "short": "Escape window",
       "appliesTo": "window",
       "where": { "escape": [true] },
       "checks": [
@@ -145,6 +156,7 @@
     {
       "id": "bfs2024-9.window.childSafety",
       "title": "Low windows need child safety devices",
+      "short": "Child safety, low windows",
       "appliesTo": "window",
       "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
       "check": { "property": "sillHeight", "op": ">=", "value": 0.60, "unit": "m" },
@@ -157,6 +169,7 @@
     {
       "id": "bfs2024-8.ceilingHeight",
       "title": "Room height",
+      "short": "Room height",
       "appliesTo": "room",
       "where": { "type": ["living", "bedroom", "kitchen"] },
       "binding": false,
@@ -169,6 +182,7 @@
     {
       "id": "bfs2024-8.daylight",
       "title": "Daylight in dwellings",
+      "short": "Daylight",
       "appliesTo": "building",
       "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
       "manual": "Needs a daylight calculation: a daylight factor of at least 1.0 % over at least half of the combined floor area of rooms where people stay more than briefly.",
@@ -179,6 +193,7 @@
     {
       "id": "bfs2024-8.view",
       "title": "View out from living and dining space",
+      "short": "View out",
       "appliesTo": "room",
       "where": { "type": ["living"] },
       "manual": "The space for living and meals must have a view out (utblick). Check window placement.",
@@ -189,6 +204,7 @@
     {
       "id": "bfs2024-8.ventilation",
       "title": "Ventilation rate in dwellings",
+      "short": "Ventilation",
       "appliesTo": "building",
       "when": [{ "property": "use", "op": "in", "value": ["house", "apartments"] }],
       "manual": "The ventilation system must be designed for at least 0.35 l/s outdoor air per m² floor area. Check with the ventilation design.",
@@ -199,6 +215,7 @@
     {
       "id": "bfs2026-4.bikeParking",
       "title": "Bicycle parking: two spaces per apartment",
+      "short": "Bike parking",
       "appliesTo": "building",
       "when": [{ "property": "use", "op": "in", "value": ["apartments"] }],
       "check": { "property": "bikeParkingPerApartment", "op": ">=", "value": 2 },
@@ -210,6 +227,7 @@
     {
       "id": "bfs2026-4.charging.apartments",
       "title": "EV charging: at least one charging point",
+      "short": "EV charging",
       "appliesTo": "building",
       "when": [
         { "property": "use", "op": "in", "value": ["apartments"] },
@@ -225,6 +243,7 @@
     {
       "id": "bfs2026-4.charging.nonResidential",
       "title": "EV charging: one point per five parking spaces",
+      "short": "EV charging",
       "appliesTo": "building",
       "when": [
         { "property": "use", "op": "in", "value": ["nonResidential"] },
@@ -240,6 +259,7 @@
     {
       "id": "bfs2026-9.energy",
       "title": "Energy performance",
+      "short": "Energy",
       "appliesTo": "building",
       "manual": "Energy requirements (BFS 2026:9, in force 1 October 2026, replacing BBR chapter 9) need an energy calculation and can't be checked from the model. BBR may still be used for bygglov applications submitted before 1 October 2027.",
       "source": { "title": "BFS 2026:9 Energihushållning och värmeisolering i byggnader", "url": "https://rinfo.boverket.se/BFS2026-9/pdf/BFS2026-9.pdf" },

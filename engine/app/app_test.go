@@ -29,12 +29,13 @@ func newTestApp(t *testing.T) *App {
 func TestFlow(t *testing.T) {
 	a := newTestApp(t)
 	v := a.Init()
-	if !strings.Contains(v.Panel, "Drop a pin") || !strings.Contains(v.Panel, "Sample plan data") {
+	if !strings.Contains(v.Panel, "Pick a site") || !strings.Contains(v.Panel, `class="rail"`) {
 		t.Fatalf("start panel: %s", v.Panel)
 	}
 
 	v = a.DropPin(18.0835, 59.3468) // centre of sample plan 1
-	if !strings.Contains(v.Panel, "EXEMPEL-2023/01") || !strings.Contains(v.Panel, "Valhallavägen 201") {
+	if !strings.Contains(v.Panel, "EXEMPEL-2023/01") || !strings.Contains(v.Panel, "Valhallavägen 201") ||
+		!strings.Contains(v.Panel, "Ridge height ≤ 16 m") || !strings.Contains(v.Panel, ">sample<") {
 		t.Fatalf("pin panel: %s", v.Panel)
 	}
 	if len(v.Map.Regs["features"].([]map[string]any)) != 2 {
@@ -50,17 +51,23 @@ func TestFlow(t *testing.T) {
 	if v.Model == nil || !v.Model.Rebuild || len(v.Map.Footprint["features"].([]map[string]any)) != 1 {
 		t.Fatalf("model view %+v", v.Model)
 	}
-	for _, tab := range []string{"model", "results", "site"} {
+	for _, tab := range []string{"model", "results", "site", "ask"} {
 		v = a.Action("tab", tab, "")
 		if strings.Contains(v.Panel, "Template error") {
 			t.Fatalf("%s: %s", tab, v.Panel)
 		}
 	}
+	// Issues: worst first, one row per rule. The three failing escape
+	// windows are one row with a figure, not three sentences.
 	v = a.Action("tab", "results", "")
-	for _, want := range []string{"Detaljplan", "Building regulations", "prickmark", "Escape window"} {
+	for _, want := range []string{"4 to fix", "Must fix", "Escape window <span class=\"muted\">×3</span>",
+		"1.1 m · needs ≥ 1.5 m", "Entrance door width", "Check by hand", "Passed"} {
 		if !strings.Contains(v.Panel, want) {
-			t.Errorf("results panel lacks %q", want)
+			t.Errorf("issues panel lacks %q", want)
 		}
+	}
+	if n := strings.Count(v.Panel, ">Escape window"); n != 1 {
+		t.Errorf("escape window rows: %d, want 1", n)
 	}
 	// The sample sits in the middle of plan 1: 24×12 m, 3 storeys, 9.4 m.
 	fails := map[string]bool{}
@@ -101,7 +108,7 @@ func TestFlow(t *testing.T) {
 	for i, r := range a.Output.Results {
 		if r.RuleID == "bfs2024-7.escapeWindow" {
 			v = a.Action("select", itoa(i), "")
-			if v.Focus != "3d" || len(v.Model.Highlight) == 0 {
+			if v.Focus != "3d" || len(v.Model.Highlight) != 3 { // all three windows
 				t.Errorf("select: focus %q highlight %v", v.Focus, v.Model.Highlight)
 			}
 		}
@@ -159,5 +166,33 @@ func TestPlacementOnMap(t *testing.T) {
 	v = a.MoveModel(18.0835, 59.3468-55/111320.0)
 	if s := state(v); s != "conflict" {
 		t.Errorf("on prickmark: state %q", s)
+	}
+}
+
+func TestMoveToNewSite(t *testing.T) {
+	a := newTestApp(t)
+	a.Init()
+	a.DropPin(18.0835, 59.3468)
+	raw, pos := ingest.Sample()
+	rj, _ := json.Marshal(raw)
+	a.LoadModel(rj, pos)
+	a.Action("rotate", "30", "")
+	e0, n0 := a.Placement.E, a.Placement.N
+
+	// A click on the same site (here 40 m away) leaves the building alone.
+	a.DropPin(18.0835, 59.3468+40/111320.0)
+	if a.Placement.E != e0 || a.Placement.N != n0 {
+		t.Fatal("building moved on a nearby click")
+	}
+	// A pin on another site (Södermalm) takes the building along, rotation kept.
+	a.DropPin(18.0585, 59.3172)
+	if math.Hypot(a.Placement.E-a.Pin.E, a.Placement.N-a.Pin.N) > 0.01 || a.Placement.RotationDeg != 30 {
+		t.Fatalf("building didn't follow: %+v vs pin %+v", a.Placement, a.Pin)
+	}
+	// Reset: back on the pin, unrotated.
+	a.MoveModel(18.0590, 59.3175)
+	a.Action("reset-placement", "", "")
+	if math.Hypot(a.Placement.E-a.Pin.E, a.Placement.N-a.Pin.N) > 0.01 || a.Placement.RotationDeg != 0 {
+		t.Fatalf("reset: %+v", a.Placement)
 	}
 }
