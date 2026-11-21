@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"github.com/martin/archreg/engine/i18n"
 
 	"github.com/ctessum/polyclip-go"
 )
@@ -20,7 +21,7 @@ type EnvelopePart struct {
 // Envelope returns the height limits of a plan as volumes, and notes about
 // limits it could not draw. baseElevation (the ground's height above sea
 // level, RH 2000) is needed for limits given "över nollplanet".
-func Envelope(p *Plan, baseElevation *float64) ([]EnvelopePart, []string) {
+func Envelope(p *Plan, baseElevation *float64, l i18n.Lang) ([]EnvelopePart, []string) {
 	if p == nil || p.PDFOnly || p.Boundary == nil {
 		return nil, nil
 	}
@@ -49,14 +50,14 @@ func Envelope(p *Plan, baseElevation *float64) ([]EnvelopePart, []string) {
 		if !ok || isMin(r) {
 			continue
 		}
-		name := map[regKind]string{kindRidgeHeight: "max ridge height", kindTotalHeight: "max total height", kindBuildingHeight: "max building height (byggnadshöjd)"}[k]
-		label := fmt.Sprintf("%s %g m", name, v)
+		name := l.T(map[regKind]string{kindRidgeHeight: "max ridge height", kindTotalHeight: "max total height", kindBuildingHeight: "max building height (byggnadshöjd)"}[k])
+		label := l.Dec(fmt.Sprintf("%s %g m", name, v))
 		if isAbsoluteHeight(r) {
 			if baseElevation == nil {
-				notes = append(notes, fmt.Sprintf("“%s” is measured above sea level. Enter the ground height (Model tab) to see it in 3D.", r.Text))
+				notes = append(notes, l.F("“%s” is measured above sea level. Enter the ground level (Model › Project details) to see it in 3D.", r.Text))
 				continue
 			}
-			label = fmt.Sprintf("%s +%g m above sea level (%g m above your ground)", name, v, v-*baseElevation)
+			label = l.F("%s +%g m above sea level (%g m above your ground)", name, v, v-*baseElevation)
 			v -= *baseElevation
 		}
 		if r.Label != "" {

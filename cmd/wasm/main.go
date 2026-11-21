@@ -13,6 +13,7 @@ import (
 	"syscall/js"
 
 	"github.com/martin/archreg/engine/app"
+	"github.com/martin/archreg/engine/i18n"
 	"github.com/martin/archreg/engine/ingest"
 	"github.com/martin/archreg/engine/rules"
 	ruleset "github.com/martin/archreg/rules"
@@ -24,14 +25,17 @@ func main() {
 	api := js.Global().Get("Object").New()
 	api.Set("version", rules.Version)
 
+	// init(lang) — "sv" or "en"
 	api.Set("init", js.FuncOf(func(this js.Value, args []js.Value) any {
 		base := js.Global().Get("location").Get("href").String()
+		lang := str(args, 0)
 		return promise(func() (any, error) {
 			var err error
 			a, err = app.New(base, ruleset.Boverket2026)
 			if err != nil {
 				return nil, err
 			}
+			a.Lang = i18n.Parse(lang)
 			return viewJSON(a.Init())
 		})
 	}))

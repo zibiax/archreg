@@ -35,6 +35,7 @@ type Input struct {
 	Model   Model  `json:"model"`
 	Plan    *Plan  `json:"plan,omitempty"`
 	Ruleset string `json:"ruleset,omitempty"`
+	Lang    string `json:"lang,omitempty"` // "sv" or "en" (default) for messages
 }
 
 // Model is the simplified building model produced by the loaders.
@@ -155,10 +156,11 @@ type RuleSet struct {
 
 // Rule is one hand-written, checkable requirement.
 type Rule struct {
-	ID        string `json:"id"`
-	Title     string `json:"title"`
-	Short     string `json:"short,omitempty"` // a few words for compact lists
-	AppliesTo string `json:"appliesTo"`       // "room", "window", "door" or "building"
+	ID        string    `json:"id"`
+	Title     string    `json:"title"`
+	Short     string    `json:"short,omitempty"` // a few words for compact lists
+	SV        *RuleText `json:"sv,omitempty"`    // Swedish title, short, manual, failHint
+	AppliesTo string    `json:"appliesTo"`       // "room", "window", "door" or "building"
 	// Where filters elements by equality (case-insensitive for strings).
 	Where map[string][]any `json:"where,omitempty"`
 	// When are conditions on the building ("use", "storeys", ...) that must
@@ -202,3 +204,11 @@ type Condition struct {
 }
 
 func (c Condition) number() (float64, bool) { return toFloat(c.Value) }
+
+// RuleText holds a rule's translatable texts.
+type RuleText struct {
+	Title    string `json:"title,omitempty"`
+	Short    string `json:"short,omitempty"`
+	Manual   string `json:"manual,omitempty"`
+	FailHint string `json:"failHint,omitempty"`
+}

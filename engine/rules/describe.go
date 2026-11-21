@@ -1,10 +1,14 @@
 package rules
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/martin/archreg/engine/i18n"
+)
 
 // Describe returns the regulation's kind ("prickmark", "nockhojd", ... or "")
 // and a short plain-language English explanation for the UI.
-func Describe(r PlanRegulation) (kind, plain string) {
+func Describe(r PlanRegulation, l i18n.Lang) (kind, plain string) {
 	k := classify(r)
 	v, hasV := regValue(r)
 	num := func(unit string) string {
@@ -15,47 +19,49 @@ func Describe(r PlanRegulation) (kind, plain string) {
 	}
 	abs := ""
 	if isAbsoluteHeight(r) {
-		abs = " above sea level (RH 2000)"
+		abs = " " + l.T("above sea level (RH 2000)")
 	}
 	switch k {
 	case kindPrickmark:
-		plain = "No buildings allowed on this land (prickmark)."
+		plain = l.T("No buildings allowed on this land (prickmark).")
 	case kindKorsmark:
-		plain = "Only small outbuildings allowed here (korsmark)."
+		plain = l.T("Only small outbuildings allowed here (korsmark).")
 	case kindRidgeHeight:
-		plain = "Max ridge height (nockhöjd)" + num("m") + abs + "."
+		plain = l.T("Max ridge height (nockhöjd)") + num("m") + abs + "."
 	case kindTotalHeight:
-		plain = "Max total height (totalhöjd)" + num("m") + abs + "."
+		plain = l.T("Max total height (totalhöjd)") + num("m") + abs + "."
 	case kindBuildingHeight:
-		plain = "Max building height (byggnadshöjd)" + num("m") + abs + "."
+		plain = l.T("Max building height (byggnadshöjd)") + num("m") + abs + "."
 	case kindBuildingArea:
 		if isPercent(r) {
-			plain = "Max building footprint (byggnadsarea)" + num("%") + " of the property."
+			plain = l.T("Max building footprint (byggnadsarea)") + num("%") + " " + l.T("of the property") + "."
 		} else {
-			plain = "Max building footprint (byggnadsarea)" + num("m²") + "."
+			plain = l.T("Max building footprint (byggnadsarea)") + num("m²") + "."
 		}
 	case kindFloorArea:
-		plain = "Max gross floor area (bruttoarea)" + num("m²") + "."
+		plain = l.T("Max gross floor area (bruttoarea)") + num("m²") + "."
 	case kindStoreys:
 		if hasV {
-			plain = fmt.Sprintf("Max number of storeys: %s.", fmtNum(v))
+			plain = l.F("Max number of storeys: %s.", fmtNum(v))
 		} else {
-			plain = "Limits the number of storeys."
+			plain = l.T("Limits the number of storeys.")
 		}
 	case kindBoundaryDist:
-		plain = "Minimum distance to the property boundary" + num("m") + "."
+		plain = l.T("Minimum distance to the property boundary") + num("m") + "."
 	default:
 		if isUse(r) {
-			plain = "Allowed use: " + r.Text + "."
+			plain = l.F("Allowed use: %s.", r.Text)
 		} else {
-			plain = "Needs to be read and judged by hand."
+			plain = l.T("Needs to be read and judged by hand.")
 		}
 	}
-	return string(k), plain
+	return string(k), l.Dec(plain)
 }
 
 // Short is a few words for compact lists: "Ridge ≤ 16 m", "No building".
-func Short(r PlanRegulation) string {
+func Short(r PlanRegulation, l i18n.Lang) string { return l.Dec(short(r, l)) }
+
+func short(r PlanRegulation, l i18n.Lang) string {
 	v, hasV := regValue(r)
 	val := func(op, unit string) string {
 		if !hasV {
@@ -69,33 +75,33 @@ func Short(r PlanRegulation) string {
 	}
 	sea := ""
 	if isAbsoluteHeight(r) {
-		sea = " above sea level"
+		sea = " " + l.T("above sea level")
 	}
 	switch classify(r) {
 	case kindPrickmark:
-		return "No building (prickmark)"
+		return l.T("No building (prickmark)")
 	case kindKorsmark:
-		return "Outbuildings only (korsmark)"
+		return l.T("Outbuildings only (korsmark)")
 	case kindRidgeHeight:
-		return "Ridge height" + val("≤", "m") + sea
+		return l.T("Ridge height") + val("≤", "m") + sea
 	case kindTotalHeight:
-		return "Total height" + val("≤", "m") + sea
+		return l.T("Total height") + val("≤", "m") + sea
 	case kindBuildingHeight:
-		return "Building height" + val("≤", "m") + sea
+		return l.T("Building height") + val("≤", "m") + sea
 	case kindBuildingArea:
 		if isPercent(r) {
-			return "Footprint" + val("≤", "% of plot")
+			return l.T("Footprint") + val("≤", l.T("% of plot"))
 		}
-		return "Footprint" + val("≤", "m²")
+		return l.T("Footprint") + val("≤", "m²")
 	case kindFloorArea:
-		return "Floor area" + val("≤", "m²")
+		return l.T("Floor area") + val("≤", "m²")
 	case kindStoreys:
-		return "Storeys" + val("≤", "")
+		return l.T("Storeys") + val("≤", "")
 	case kindBoundaryDist:
-		return "To boundary" + val("≥", "m")
+		return l.T("To boundary") + val("≥", "m")
 	}
 	if isUse(r) {
-		return "Use: " + r.Text
+		return l.F("Use: %s", r.Text)
 	}
 	t := []rune(r.Text)
 	if len(t) > 48 {

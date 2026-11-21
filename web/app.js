@@ -11,6 +11,55 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 const $ = (s) => document.querySelector(s);
+
+// ------------------------------------------------------------- language ----
+// The panel's text comes translated from Go; these are the few strings
+// that live in the page and this file.
+const UI = {
+  en: {
+    welcome: "Welcome to", search: "Search address, place or coordinates", import: "Import design",
+    hideAnswers: "Hide answers", askPlaceholder: "Ask, e.g. why does my window fail? What is e1?", ask: "Ask a question", send: "Send",
+    map: "Map", map3d: "3D map", map3dTitle: "Tilted map with surrounding buildings, the plan's height limits and your model",
+    model: "Model", modelTitle: "Look at the model on its own", envLegend: "Plan height limit", osmLegend: "Existing buildings",
+    starting: "Starting…", reading: (n) => `Reading ${n}…`, cantRead: (n, e) => `Couldn't read ${n}: ${e}`,
+    cantStart: (e) => `Couldn't start the app: ${e}`, noMatches: (q) => `No matches for “${q}”`,
+    hint: "Drag the building to move it, and the round handle to rotate it. Switch to 3D map to see it among its neighbours.",
+    rotate: "Drag to rotate the building",
+  },
+  sv: {
+    welcome: "Välkommen till", search: "Sök adress, plats eller koordinater", import: "Importera modell",
+    hideAnswers: "Dölj svar", askPlaceholder: "Fråga, t.ex. varför klarar inte mitt fönster kraven? Vad är e1?", ask: "Ställ en fråga", send: "Skicka",
+    map: "Karta", map3d: "3D-karta", map3dTitle: "Lutad karta med omgivande byggnader, planens höjdgränser och din modell",
+    model: "Modell", modelTitle: "Titta på modellen för sig", envLegend: "Planens höjdgräns", osmLegend: "Befintliga byggnader",
+    starting: "Startar…", reading: (n) => `Läser ${n}…`, cantRead: (n, e) => `Kunde inte läsa ${n}: ${e}`,
+    cantStart: (e) => `Appen kunde inte starta: ${e}`, noMatches: (q) => `Inga träffar för ”${q}”`,
+    hint: "Dra i byggnaden för att flytta den och i det runda handtaget för att vrida den. Byt till 3D-karta för att se den bland grannarna.",
+    rotate: "Dra för att vrida byggnaden",
+  },
+};
+let lang = (() => {
+  try { const s = localStorage.getItem("lang"); if (s === "sv" || s === "en") return s; } catch {}
+  return (navigator.language || "").toLowerCase().startsWith("sv") ? "sv" : "en";
+})();
+const L = (k, ...a) => { const v = UI[lang][k] ?? UI.en[k]; return typeof v === "function" ? v(...a) : v; };
+function applyLang() {
+  document.documentElement.lang = lang;
+  for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = L(el.dataset.i18n);
+  for (const el of document.querySelectorAll("[data-i18n-placeholder]")) el.placeholder = L(el.dataset.i18nPlaceholder);
+  for (const el of document.querySelectorAll("[data-i18n-title]")) el.title = L(el.dataset.i18nTitle);
+  for (const el of document.querySelectorAll("[data-i18n-aria]")) el.setAttribute("aria-label", L(el.dataset.i18nAria));
+  for (const b of document.querySelectorAll("[data-lang]")) b.setAttribute("aria-pressed", String(b.dataset.lang === lang));
+  for (const el of document.querySelectorAll(".rot-handle")) el.title = L("rotate");
+}
+applyLang();
+for (const b of document.querySelectorAll("[data-lang]")) b.addEventListener("click", async () => {
+  if (b.dataset.lang === lang) return;
+  lang = b.dataset.lang;
+  try { localStorage.setItem("lang", lang); } catch {}
+  applyLang();
+  closeSuggest();
+  await call("action", "lang", lang, "");
+});
 const loading = (on, text = "Loading…") => { $("#loading").hidden = !on; $("#loading").textContent = text; };
 let toastTimer;
 function toast(msg) {
@@ -140,7 +189,7 @@ function placeMatrix(p) {
 // Rotate handle: a round knob just outside the building, on its local +y
 // axis. Dragging it around the centre turns the building.
 const handleEl = document.createElement("div");
-handleEl.className = "rot-handle"; handleEl.title = "Drag to rotate the building";
+handleEl.className = "rot-handle"; handleEl.title = L("rotate");
 const handle = new maplibregl.Marker({ element: handleEl, draggable: true });
 const rot = { place: null, start: null, busy: false, next: null, dragging: false };
 function handlePos(p) {
@@ -205,7 +254,7 @@ function applyPlace(p) {
   onMap.matrix = p ? placeMatrix(p) : null;
   if (p) {
     if (!rot.dragging) handle.setLngLat(handlePos(p)).addTo(map);
-    if (!hinted) { hinted = true; toast("Drag the building to move it, and the round handle to rotate it. Switch to 3D map to see it among its neighbours."); }
+    if (!hinted) { hinted = true; toast(L("hint")); }
   } else handle.remove();
   hideReplacedSoon();
   map.triggerRepaint();
@@ -372,11 +421,10 @@ async function apply(v) {
   const old = $("#panel .pane"); const scroll = old && v.tab === lastTab ? old.scrollTop : 0;
   $("#panel").innerHTML = v.panel;
   const pane = $("#panel .pane"); if (pane) pane.scrollTop = scroll;
-  const asking = v.tab === "ask";
-  if (asking && lastTab !== "ask") setTimeout(() => $("#ask input").focus(), 0);
   lastTab = v.tab;
-  $("#askpane").hidden = !asking;
-  const chat = $("#chat"); chat.innerHTML = v.chat; chat.scrollTop = chat.scrollHeight;
+  const chat = $("#chat"); chat.innerHTML = v.chat;
+  $("#chatbox").hidden = chatFolded || !chat.children.length;
+  chat.scrollTop = chat.scrollHeight;
   if (v.error) toast(v.error);
 
   await mapReady;
@@ -445,7 +493,7 @@ function renderSuggest(places, q) {
   search.list.replaceChildren();
   if (!places.length) {
     const li = document.createElement("li"); li.className = "none";
-    li.textContent = `No matches for “${q}”`;
+    li.textContent = L("noMatches", q);
     search.list.append(li);
   }
   places.forEach((p, i) => {
@@ -521,11 +569,16 @@ search.form.addEventListener("submit", async (e) => {
     await call("search", q, c.lng, c.lat);
   } finally { setBusy(false); }
 });
+// The ask bar sits at the bottom of the left side at all times; answers
+// show above it until folded, and come back with the next question.
+let chatFolded = false;
 $("#ask").addEventListener("submit", (e) => {
   e.preventDefault();
   const q = e.target.q.value.trim(); if (!q) return;
+  chatFolded = false;
   e.target.q.value = ""; call("action", "ask", q, "");
 });
+$("#chat-fold").addEventListener("click", () => { chatFolded = true; $("#chatbox").hidden = true; });
 $("#import").addEventListener("click", () => $("#file").click());
 $("#file").addEventListener("change", async (e) => {
   const f = e.target.files[0]; e.target.value = "";
@@ -547,7 +600,7 @@ async function loadSample() {
 
 async function loadFile(file) {
   const ext = file.name.toLowerCase().split(".").pop();
-  loading(true, `Reading ${file.name}…`);
+  loading(true, L("reading", file.name));
   try {
     const buf = new Uint8Array(await file.arrayBuffer());
     const { raw, positions } = ext === "3dm" ? await read3dm(buf) : await readIFC(buf);
@@ -555,7 +608,7 @@ async function loadFile(file) {
     await loadModel(raw, positions);
   } catch (e) {
     console.error(e);
-    toast(`Couldn't read ${file.name}: ${e.message || e}`);
+    toast(L("cantRead", file.name, e.message || e));
   } finally {
     loading(false);
   }
@@ -745,16 +798,16 @@ async function read3dm(buf) {
 }
 
 // --------------------------------------------------------------- start ----
-loading(true, "Starting…");
+loading(true, L("starting"));
 try {
   await startGo();
-  await call("init");
+  await call("init", lang);
   const b = map.getBounds();
   await mapReady;
   call("viewport", b.getWest(), b.getSouth(), b.getEast(), b.getNorth(), map.getZoom());
 } catch (e) {
   console.error(e);
-  toast("Couldn't start the app: " + (e.message || e));
+  toast(L("cantStart", e.message || e));
 } finally {
   loading(false);
 }

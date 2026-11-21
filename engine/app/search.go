@@ -238,7 +238,7 @@ func (a *App) Search(q string, biasLon, biasLat float64) *View {
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	a.toast = fmt.Sprintf("No place in Sweden matches “%s”. Try a street and number, a place name, or coordinates.", q)
+	a.toast = a.Lang.F("No place in Sweden matches “%s”. Try a street and number, a place name, or coordinates.", q)
 	return a.view()
 }
 

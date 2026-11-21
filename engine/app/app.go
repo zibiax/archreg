@@ -7,6 +7,7 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/martin/archreg/engine/i18n"
 	"math"
 	"net/url"
 	"strconv"
@@ -34,7 +35,8 @@ type ChatMsg struct {
 
 // App holds all state.
 type App struct {
-	mu sync.Mutex
+	Lang i18n.Lang // "en" or "sv"; set with the "lang" action
+	mu   sync.Mutex
 
 	base    *url.URL
 	store   *plans.Store
@@ -104,7 +106,7 @@ func New(base string, rulesJSON []byte) (*App, error) {
 	a := &App{base: u, ruleset: &rs, Tab: "site", Selected: -1,
 		layerKinds: map[string]string{}, roomType: map[string]string{}, escape: map[string]bool{}, external: map[string]bool{}}
 	a.store = plans.NewStore(func(name string) ([]byte, error) { return a.get("data/plans/" + name) })
-	a.Chat = []ChatMsg{{From: "app", Text: "Ask about a failure (\"why does my window fail?\"), a plan label (\"what is e1?\") or a word (\"prickmark\")."}}
+	a.Chat = nil
 	return a, nil
 }
 
@@ -133,7 +135,7 @@ func (a *App) DropPin(lon, lat float64) *View { return a.dropPin(lon, lat, "") }
 func (a *App) dropPin(lon, lat float64, addr string) *View {
 	e, n := geo.ToSweref(lon, lat)
 	a.mu.Lock()
-	a.Pin = &Pin{Lon: lon, Lat: lat, E: e, N: n, Address: "Looking up address…"}
+	a.Pin = &Pin{Lon: lon, Lat: lat, E: e, N: n, Address: a.Lang.T("Looking up address…")}
 	a.Tab = "site"
 	a.lastError = ""
 	a.mu.Unlock()
@@ -151,7 +153,7 @@ func (a *App) dropPin(lon, lat float64, addr string) *View {
 	a.Pin.Address = addr
 	a.Plans, a.PlanIdx = ps, 0
 	if err != nil {
-		a.lastError = "Couldn't load plan data: " + err.Error()
+		a.lastError = a.Lang.F("Couldn't load plan data: %s", err.Error())
 	}
 	// The building comes along to a new site: an unplaced model goes to
 	// the pin, and so does a placed one when the pin is on another site
@@ -192,14 +194,14 @@ func (a *App) LoadModel(rawJSON []byte, positions []float32) *View {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if err != nil {
-		a.lastError = "Couldn't read the model: " + err.Error()
+		a.lastError = a.Lang.F("Couldn't read the model: %s", err.Error())
 		return a.view()
 	}
 	a.raw, a.positions = &raw, positions
 	a.layerKinds = map[string]string{}
 	a.roomType, a.escape, a.external = map[string]string{}, map[string]bool{}, map[string]bool{}
 	if err := a.rebuild(); err != nil {
-		a.lastError = "Couldn't read the model: " + err.Error()
+		a.lastError = a.Lang.F("Couldn't read the model: %s", err.Error())
 		a.Building = nil
 		return a.view()
 	}
@@ -208,7 +210,7 @@ func (a *App) LoadModel(rawJSON []byte, positions []float32) *View {
 		a.Placement = &p
 		lon, lat := geo.ToWGS84(p.E, p.N)
 		a.flyTo = []float64{lon, lat, 18}
-		a.Chat = append(a.Chat, ChatMsg{"app", "The model is georeferenced in SWEREF 99 TM, so I placed it automatically."})
+		a.Chat = append(a.Chat, ChatMsg{"app", a.Lang.T("The model is georeferenced in SWEREF 99 TM, so I placed it automatically.")})
 	} else if a.Pin != nil {
 		a.Placement = &ingest.Placement{E: a.Pin.E, N: a.Pin.N}
 	}
@@ -287,7 +289,7 @@ func (a *App) recheck() {
 	setF("elevators", a.Project.Elevators)
 
 	m := b.Model(a.Placement, facts, a.Project.BaseElevation)
-	in := rules.Input{Model: m, Ruleset: a.ruleset.ID}
+	in := rules.Input{Model: m, Ruleset: a.ruleset.ID, Lang: string(a.Lang)}
 	if p := a.plan(); p != nil {
 		in.Plan = p
 	}
@@ -325,8 +327,13 @@ func (a *App) Action(name, value, id string) *View {
 		return &v
 	}
 	switch name {
+	case "lang":
+		a.Lang = i18n.Parse(value)
 	case "tab":
-		a.Tab = value
+		switch value {
+		case "site", "model", "results":
+			a.Tab = value
+		}
 	case "plan":
 		if i, err := strconv.Atoi(value); err == nil {
 			a.PlanIdx = i

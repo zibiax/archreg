@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"github.com/martin/archreg/engine/i18n"
 	"strings"
 
 	"github.com/martin/archreg/engine/rules"
@@ -64,7 +65,7 @@ func (a *App) issues() []issueSection {
 			if title == "" {
 				title = r.Title
 			}
-			tag := "Plan"
+			tag := a.Lang.T("Plan")
 			if r.Group != rules.GroupPlan {
 				tag = r.Source.Title
 				if i := strings.Index(tag, " "); i > 0 {
@@ -73,9 +74,9 @@ func (a *App) issues() []issueSection {
 					}
 				}
 			}
-			is = &issue{Key: k, I: i, Status: r.Status, Title: title, Tag: tag, R: r, Selected: k == sel, Metric: metric(r)}
+			is = &issue{Key: k, I: i, Status: r.Status, Title: title, Tag: tag, R: r, Selected: k == sel, Metric: metric(r, a.Lang)}
 			if r.Status == rules.Missing && is.Metric == "" {
-				is.Metric = missingHint(r)
+				is.Metric = missingHint(r, a.Lang)
 			}
 			byKey[k] = is
 			order = append(order, k)
@@ -87,7 +88,7 @@ func (a *App) issues() []issueSection {
 				ns = append(ns, n)
 			}
 		}
-		is.Members = append(is.Members, issueMember{Name: strings.Join(ns, ", "), Metric: metric(r), Message: r.Message})
+		is.Members = append(is.Members, issueMember{Name: strings.Join(ns, ", "), Metric: metric(r, a.Lang), Message: r.Message})
 	}
 	// ×N counts results that are about one element each (three windows),
 	// not a single finding that names many ("none of the 6 rooms…"), nor
@@ -115,10 +116,10 @@ func (a *App) issues() []issueSection {
 	}
 
 	sections := []issueSection{
-		{Status: rules.Fail, Label: "Must fix", Open: true},
-		{Status: rules.Missing, Label: "Missing info", Open: true},
-		{Status: rules.Manual, Label: "Check by hand"},
-		{Status: rules.Pass, Label: "Passed"},
+		{Status: rules.Fail, Label: a.Lang.T("Must fix"), Open: true},
+		{Status: rules.Missing, Label: a.Lang.T("Missing info"), Open: true},
+		{Status: rules.Manual, Label: a.Lang.T("Check by hand")},
+		{Status: rules.Pass, Label: a.Lang.T("Passed")},
 	}
 	for _, k := range order {
 		is := byKey[k]
@@ -151,7 +152,9 @@ func (a *App) selectedIssue() []rules.Result {
 }
 
 // metric is the one figure that matters: "1.2 m · needs ≥ 1.3 m".
-func metric(r rules.Result) string {
+func metric(r rules.Result, l i18n.Lang) string { return l.Dec(metricEN(r, l)) }
+
+func metricEN(r rules.Result, l i18n.Lang) string {
 	if r.Measured == nil || r.Required == nil {
 		return ""
 	}
@@ -171,30 +174,30 @@ func metric(r rules.Result) string {
 	}
 	what := ""
 	if r.Group != rules.GroupPlan && r.What != "" {
-		what = strings.NewReplacer("opening ", "", " plus ", " + ", "minimum ", "min ").Replace(r.What) + " "
+		what = strings.NewReplacer("opening ", "", " plus ", " + ", "minimum ", "min ", "öppningens ", "", " plus ", " + ").Replace(r.What) + " "
 	}
 	m, q := *r.Measured, *r.Required
 	switch r.Op {
 	case "==":
 		if r.What == "area on prickmark" {
-			return n(m) + " on prickmark"
+			return l.F("%s on prickmark", n(m))
 		}
 		return what + n(m)
 	case "<=", "<":
-		return fmt.Sprintf("%s%s · max %s", what, n(m), n(q))
+		return l.F("%s%s · max %s", what, n(m), n(q))
 	case ">=", ">":
-		return fmt.Sprintf("%s%s · needs ≥ %s", what, n(m), n(q))
+		return l.F("%s%s · needs ≥ %s", what, n(m), n(q))
 	}
 	return what + n(m)
 }
 
 // missingHint says where to supply what a check lacks.
-func missingHint(r rules.Result) string {
+func missingHint(r rules.Result, l i18n.Lang) string {
 	switch {
 	case r.Group == rules.GroupPlan:
-		return "Needs the building's outline or height in the model"
-	case len(r.Elements) == 1 && r.Elements[0] == "building", strings.Contains(r.Message, "Project"):
-		return "Add it in Model › Project details"
+		return l.T("Needs the building's outline or height in the model")
+	case len(r.Elements) == 1 && r.Elements[0] == "building", strings.Contains(r.Message, l.T("Project details")):
+		return l.T("Add it in Model › Project details")
 	}
-	return "Not in the model export"
+	return l.T("Not in the model export")
 }

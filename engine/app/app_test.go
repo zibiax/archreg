@@ -196,3 +196,52 @@ func TestMoveToNewSite(t *testing.T) {
 		t.Fatalf("reset: %+v", a.Placement)
 	}
 }
+
+func TestSwedish(t *testing.T) {
+	a := newTestApp(t)
+	a.Init()
+	a.Action("lang", "sv", "")
+	a.DropPin(18.0835, 59.3468)
+	raw, pos := ingest.Sample()
+	rj, _ := json.Marshal(raw)
+	a.LoadModel(rj, pos)
+
+	v := a.Action("tab", "results", "")
+	for _, want := range []string{"4 att åtgärda", "Måste åtgärdas", "Utrymningsfönster", "krav ≥ 1,5 m", "Vändzon i badrum", "Kontrollera för hand", "Godkänt", "BFS 2024:12"} {
+		if !strings.Contains(v.Panel, want) {
+			t.Errorf("issues lack %q", want)
+		}
+	}
+	for _, en := range []string{"Must fix", "needs ≥", "Check by hand", "Escape window", "Passed", "to fix"} {
+		if strings.Contains(v.Panel, en) {
+			t.Errorf("issues still say %q", en)
+		}
+	}
+	// Open a row: the explanation is Swedish too.
+	for i, r := range a.Output.Results {
+		if r.RuleID == "bfs2024-7.escapeWindow" {
+			v = a.Action("select", itoa(i), "")
+			break
+		}
+	}
+	if !strings.Contains(v.Panel, "Fönster sovrum (utrymning): bredd plus höjd") || !strings.Contains(v.Panel, "säkert under 1,5 m") {
+		t.Errorf("explanation not Swedish:\n%s", v.Panel)
+	}
+	v = a.Action("tab", "site", "")
+	if !strings.Contains(v.Panel, "Nockhöjd ≤ 16 m") || !strings.Contains(v.Panel, "Ej byggnad (prickmark)") || !strings.Contains(v.Panel, ">Plats<") {
+		t.Errorf("site panel not Swedish:\n%s", v.Panel)
+	}
+	v = a.Action("tab", "model", "")
+	if !strings.Contains(v.Panel, "Projektuppgifter") || !strings.Contains(v.Panel, "Återställ till nålen") || !strings.Contains(v.Panel, ">sovrum<") {
+		t.Errorf("model panel not Swedish")
+	}
+	v = a.Action("ask", "vad betyder e1?", "")
+	if !strings.Contains(v.Chat, "e1 i plan") || !strings.Contains(v.Chat, "Största byggnadsarea") {
+		t.Errorf("chat: %s", v.Chat)
+	}
+	// And back.
+	v = a.Action("lang", "en", "")
+	if !strings.Contains(v.Panel, "Project details") || v.Lang != "en" {
+		t.Error("switching back to English")
+	}
+}

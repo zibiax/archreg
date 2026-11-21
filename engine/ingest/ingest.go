@@ -295,7 +295,7 @@ func Build(raw Raw, positions []float32, layerKinds map[string]string) (*Buildin
 		}
 		b.Georef = &Georef{E: mc.Eastings, N: mc.Northings, RotationDeg: rot}
 	} else if mc != nil {
-		b.Warnings = append(b.Warnings, fmt.Sprintf("The IFC is georeferenced in %q, not SWEREF 99 TM, so it has to be placed by hand.", mc.CRS))
+		b.Warnings = append(b.Warnings, "The IFC is georeferenced in another coordinate system than SWEREF 99 TM, so it has to be placed by hand.")
 	}
 	if len(b.Rooms) == 0 {
 		b.Warnings = append(b.Warnings, "No rooms (IfcSpace) in the model, so room checks can't run. Export rooms/spaces from your program.")

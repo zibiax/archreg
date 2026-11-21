@@ -42,14 +42,14 @@ func checkRule(m *Model, building Element, rule Rule) []Result {
 		o := evalCondition(building, c)
 		switch o.status {
 		case Missing:
-			return []Result{res(Missing, fmt.Sprintf("Needs the building's %s to know whether this rule applies. Set it under Project info.", humanProp(c.Property)), nil)}
+			return []Result{res(Missing, trf("Needs the building's %s to know whether this rule applies. Set it under Project details.", humanProp(c.Property)), nil)}
 		case Fail, Manual:
 			return nil // not applicable
 		}
 	}
 
 	var elems []Element
-	noun := rule.AppliesTo
+	kind := rule.AppliesTo
 	switch rule.AppliesTo {
 	case "room":
 		elems = m.Rooms
@@ -60,7 +60,7 @@ func checkRule(m *Model, building Element, rule Rule) []Result {
 	case "building":
 		elems = []Element{building}
 	default:
-		return []Result{res(Manual, fmt.Sprintf("Unknown rule target %q. Fix the rule definition.", rule.AppliesTo), nil)}
+		return []Result{res(Manual, trf("Unknown rule target %q. Fix the rule definition.", rule.AppliesTo), nil)}
 	}
 
 	var matching []Element
@@ -74,10 +74,10 @@ func checkRule(m *Model, building Element, rule Rule) []Result {
 		return []Result{res(Manual, rule.Manual, ids(matching))}
 	}
 	if len(elems) == 0 {
-		return []Result{res(Missing, fmt.Sprintf("The model has no %ss, so this can't be checked. Make sure %ss are included in the export.", noun, noun), nil)}
+		return []Result{res(Missing, trf("The model has no %s, so this can't be checked. Make sure they are included in the export.", noun(kind, 2)), nil)}
 	}
 	if len(matching) == 0 {
-		return []Result{res(Manual, fmt.Sprintf("No %ss matching %s were found in the model. If there should be, set their type or name so the app can recognise them.", noun, describeWhere(rule.Where)), nil)}
+		return []Result{res(Manual, trf("No %s matching %s were found in the model. If there should be, set their type or name so the app can recognise them.", noun(kind, 2), describeWhere(rule.Where)), nil)}
 	}
 
 	conds := rule.Checks
@@ -93,7 +93,7 @@ func checkRule(m *Model, building Element, rule Rule) []Result {
 	}
 	var evs []evaluated
 	for _, e := range matching {
-		evs = append(evs, evaluated{e, evalAll(e, conds, label(e, noun))})
+		evs = append(evs, evaluated{e, evalAll(e, conds, label(e, kind))})
 	}
 
 	// softenPass turns a pass we can't fully back up into "manual".
@@ -102,11 +102,11 @@ func checkRule(m *Model, building Element, rule Rule) []Result {
 		case !binding:
 			return Manual, ""
 		case rule.Necessary:
-			return Manual, fmt.Sprintf("%d %s(s) meet the measurable part of this rule, but that alone doesn't prove compliance. Check the rest by hand.", n, noun)
+			return Manual, trf("%d %s meet the measurable part of this rule, but that alone doesn't prove compliance. Check the rest by hand.", n, noun(kind, n))
 		case !rule.Verified:
-			return Manual, fmt.Sprintf("%d %s(s) meet the rule's value, but this rule hasn't been verified against the regulation text yet.", n, noun)
+			return Manual, trf("%d %s meet the rule's value, but this rule hasn't been verified against the regulation text yet.", n, noun(kind, n))
 		}
-		return Pass, fmt.Sprintf("%d %s(s) meet this rule.", n, noun)
+		return Pass, trf("%d %s meet this rule.", n, noun(kind, n))
 	}
 
 	if rule.Quantifier == "any" {
@@ -131,28 +131,28 @@ func checkRule(m *Model, building Element, rule Rule) []Result {
 		case len(passed) > 0:
 			s, msg := softenPass(len(passed))
 			if !binding {
-				msg = fmt.Sprintf("At least one %s meets the reference value. This is guidance, not a binding requirement.", noun)
+				msg = trf("At least one %s meets the reference value. This is guidance, not a binding requirement.", noun(kind, 1))
 			} else if s != Pass || rule.Necessary {
-				msg = fmt.Sprintf("At least one %s meets the measurable part. Check the rest by hand.", noun)
+				msg = trf("At least one %s meets the measurable part. Check the rest by hand.", noun(kind, 1))
 			} else {
-				msg = fmt.Sprintf("At least one %s meets this rule.", noun)
+				msg = trf("At least one %s meets this rule.", noun(kind, 1))
 			}
 			return []Result{res(s, msg, passed)}
 		case len(manual) > 0:
-			return []Result{res(Manual, fmt.Sprintf("No %s can be confirmed to meet this rule from the model's data. Check by hand.", noun), manual)}
+			return []Result{res(Manual, trf("No %s can be confirmed to meet this rule from the model's data. Check by hand.", noun(kind, 1)), manual)}
 		case len(failed) > 0 && len(missing) == 0:
-			r := res(Fail, fmt.Sprintf("None of the %d %ss meets this rule. For example: %s", len(failed), noun, firstFail.msg), failed)
+			r := res(Fail, trf("None of the %d %s meets this rule. For example: %s", len(failed), noun(kind, len(failed)), firstFail.msg), failed)
 			r.Measured, r.Required, r.Unit, r.Op, r.What = firstFail.measured, firstFail.required, firstFail.unit, firstFail.op, firstFail.what
 			if rule.OnFail == "manual" {
 				r.Status = Manual
 				r.Message += " " + rule.FailHint
 			} else if !binding {
 				r.Status = Manual
-				r.Message = "None meets the reference value (guidance, not binding). " + firstFail.msg
+				r.Message = tr("None meets the reference value (guidance, not binding).") + " " + firstFail.msg
 			}
 			return []Result{r}
 		default:
-			return []Result{res(Missing, fmt.Sprintf("The model lacks the data to check this for %d %s(s).", len(missing), noun), missing)}
+			return []Result{res(Missing, trf("The model lacks the data to check this for %d %s.", len(missing), noun(kind, len(missing))), missing)}
 		}
 	}
 
@@ -170,7 +170,7 @@ func checkRule(m *Model, building Element, rule Rule) []Result {
 				o.msg += " " + rule.FailHint
 			} else if !binding {
 				o.status = Manual
-				o.msg += " This value is guidance, not a binding requirement."
+				o.msg += " " + tr("This value is guidance, not a binding requirement.")
 			}
 		}
 		r := res(o.status, o.msg, []string{elemID(ev.e)})
@@ -180,7 +180,7 @@ func checkRule(m *Model, building Element, rule Rule) []Result {
 	if len(passed) > 0 {
 		s, msg := softenPass(len(passed))
 		if !binding {
-			msg = fmt.Sprintf("%d %s(s) meet the reference value. This is guidance, not a binding requirement.", len(passed), noun)
+			msg = trf("%d %s meet the reference value. This is guidance, not a binding requirement.", len(passed), noun(kind, len(passed)))
 		}
 		out = append(out, res(s, msg, passed))
 	}
@@ -208,7 +208,7 @@ func evalCondition(e Element, c Condition) outcome {
 	if c.Op == "in" || c.Op == "==" {
 		v, ok := e[c.Property]
 		if !ok {
-			return outcome{status: Missing, msg: "has no " + prop + "."}
+			return outcome{status: Missing, msg: trf("has no %s.", prop)}
 		}
 		allowed, isList := c.Value.([]any)
 		if !isList {
@@ -219,12 +219,12 @@ func evalCondition(e Element, c Condition) outcome {
 				return outcome{status: Pass}
 			}
 		}
-		return outcome{status: Fail, msg: fmt.Sprintf("%s is %v.", prop, v)}
+		return outcome{status: Fail, msg: trf("%s is %v.", prop, v)}
 	}
 
 	want, ok := c.number()
 	if !ok {
-		return outcome{status: Manual, msg: "rule value for " + prop + " isn't a number."}
+		return outcome{status: Manual, msg: trf("rule value for %s isn't a number.", prop)}
 	}
 	o := outcome{required: ptr(want), unit: c.Unit, op: c.Op, what: prop}
 	v, ok := number(e, c.Property)
@@ -235,16 +235,16 @@ func evalCondition(e Element, c Condition) outcome {
 				o.what = humanProp(c.Upper)
 				if (c.Op == ">=" || c.Op == ">") && !compareOp(up, c.Op, want) {
 					o.status = Fail
-					o.msg = fmt.Sprintf("%s is %s %s, so the %s is certainly below %s %s.", humanProp(c.Upper), fmtNum(up), c.Unit, prop, fmtNum(want), c.Unit)
+					o.msg = trf("%s is %s %s, so the %s is certainly below %s %s.", humanProp(c.Upper), fmtNum(up), c.Unit, prop, fmtNum(want), c.Unit)
 					return o
 				}
 				o.status = Manual
-				o.msg = fmt.Sprintf("%s is %s %s, but the %s (needs to be %s %s %s) isn't in the model. Measure it.", humanProp(c.Upper), fmtNum(up), c.Unit, prop, opWord(c.Op), fmtNum(want), c.Unit)
+				o.msg = trf("%s is %s %s, but the %s (needs to be %s %s %s) isn't in the model. Measure it.", humanProp(c.Upper), fmtNum(up), c.Unit, prop, opWord(c.Op), fmtNum(want), c.Unit)
 				return o
 			}
 		}
 		o.status = Missing
-		o.msg = "has no " + prop + "."
+		o.msg = trf("has no %s.", prop)
 		return o
 	}
 	o.measured = ptr(round(v, 2))
@@ -253,7 +253,7 @@ func evalCondition(e Element, c Condition) outcome {
 		return o
 	}
 	o.status = Fail
-	o.msg = fmt.Sprintf("%s is %s %s, needs to be %s %s %s.", prop, fmtNum(v), c.Unit, opWord(c.Op), fmtNum(want), c.Unit)
+	o.msg = trf("%s is %s %s, needs to be %s %s %s.", prop, fmtNum(v), c.Unit, opWord(c.Op), fmtNum(want), c.Unit)
 	return o
 }
 
@@ -395,20 +395,25 @@ func compareOp(v float64, op string, x float64) bool {
 func opWord(op string) string {
 	switch op {
 	case ">=":
-		return "at least"
+		return tr("at least")
 	case ">":
-		return "more than"
+		return tr("more than")
 	case "<=":
-		return "at most"
+		return tr("at most")
 	case "<":
-		return "less than"
+		return tr("less than")
 	case "==":
-		return "exactly"
+		return tr("exactly")
 	}
 	return op
 }
 
 func humanProp(p string) string {
+	return tr(splitCamel(p))
+}
+
+// splitCamel turns "openingWidthPlusHeight" into "opening width plus height".
+func splitCamel(p string) string {
 	var b strings.Builder
 	for i, r := range p {
 		if i > 0 && r >= 'A' && r <= 'Z' {
@@ -422,7 +427,7 @@ func humanProp(p string) string {
 
 func describeWhere(w map[string][]any) string {
 	if len(w) == 0 {
-		return "the rule"
+		return tr("the rule")
 	}
 	var parts []string
 	for k, v := range w {
@@ -442,12 +447,16 @@ func elemID(e Element) string {
 	return fmt.Sprint(e["id"])
 }
 
-func label(e Element, noun string) string {
+func label(e Element, kind string) string {
 	name, _ := e["name"].(string)
 	if name == "" {
 		name = elemID(e)
 	}
-	return capitalize(noun) + " " + name
+	n := capitalize(noun(kind, 1))
+	if strings.HasPrefix(strings.ToLower(name), strings.ToLower(n)) {
+		return name // "Fönster sovrum", not "Fönster Fönster sovrum"
+	}
+	return n + " " + name
 }
 
 func ids(es []Element) []string {

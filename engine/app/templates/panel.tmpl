@@ -1,54 +1,49 @@
 {{define "panel"}}
-<nav class="rail" aria-label="Sections">
-  <button data-action="tab" data-value="site" {{if eq .Tab "site"}}aria-current="page"{{end}} title="Site and detaljplan">
+<nav class="rail" aria-label="{{t "Sections"}}">
+  <button data-action="tab" data-value="site" {{if eq .Tab "site"}}aria-current="page"{{end}} title="{{t "Site and detaljplan"}}">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
-    <span>Site</span>
+    <span>{{t "Site"}}</span>
   </button>
-  <button data-action="tab" data-value="model" {{if eq .Tab "model"}}aria-current="page"{{end}} title="Your model">
+  <button data-action="tab" data-value="model" {{if eq .Tab "model"}}aria-current="page"{{end}} title="{{t "Your model"}}">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg>
-    <span>Model</span>
+    <span>{{t "Model"}}</span>
   </button>
-  <button data-action="tab" data-value="results" {{if eq .Tab "results"}}aria-current="page"{{end}} title="What fails">
+  <button data-action="tab" data-value="results" {{if eq .Tab "results"}}aria-current="page"{{end}} title="{{t "What fails"}}">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg>
-    <span>Issues</span>
-    {{if .Out}}{{if gt .FailCount 0}}<b class="badge bad">{{.FailCount}}</b>{{else}}<b class="badge ok" aria-label="no failures">✓</b>{{end}}{{end}}
-  </button>
-  <button data-action="tab" data-value="ask" {{if eq .Tab "ask"}}aria-current="page"{{end}} title="Ask a question">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>
-    <span>Ask</span>
+    <span>{{t "Issues"}}</span>
+    {{if .Out}}{{if gt .FailCount 0}}<b class="badge bad">{{.FailCount}}</b>{{else}}<b class="badge ok" aria-label="{{t "no failures"}}">✓</b>{{end}}{{end}}
   </button>
 </nav>
-<div class="pane{{if eq .Tab "ask"}} pane-ask{{end}}">
+<div class="pane">
 {{if eq .Tab "site"}}{{template "site" .}}{{end}}
 {{if eq .Tab "model"}}{{template "model" .}}{{end}}
 {{if eq .Tab "results"}}{{template "results" .}}{{end}}
-{{if eq .Tab "ask"}}<h2>Ask</h2><p class="muted small">About a failure, a rule or a plan label like “e1”.</p>{{end}}
 </div>
 {{end}}
 
 {{define "site"}}
-{{if .IdxErr}}<p class="note warn small">No plan data loaded.</p>{{end}}
+{{if .IdxErr}}<p class="note warn small">{{t "No plan data loaded."}}</p>{{end}}
 {{if not .Pin}}
   <div class="empty">
     <svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
-    <p><b>Pick a site</b></p>
-    <p class="muted">Click the map or search.</p>
+    <p><b>{{t "Pick a site"}}</b></p>
+    <p class="muted">{{t "Click the map or search."}}</p>
   </div>
 {{else}}
   <h2 class="address">{{.Pin.Address}}</h2>
   {{if not .Plans}}
-    <p class="muted">No digital detaljplan here. Check the municipality's plan map.</p>
+    <p class="muted">{{t "No digital detaljplan here. Check the municipality's plan map."}}</p>
   {{else}}
     {{if gt (len .Plans) 1}}
-      <select class="plan-pick" data-action="plan" aria-label="Plan">{{range $i, $p := .Plans}}<option value="{{$i}}" {{if eq $i $.PlanIdx}}selected{{end}}>{{$p.ID}}</option>{{end}}</select>
+      <select class="plan-pick" data-action="plan" aria-label="{{t "Plan"}}">{{range $i, $p := .Plans}}<option value="{{$i}}" {{if eq $i $.PlanIdx}}selected{{end}}>{{$p.ID}}</option>{{end}}</select>
     {{end}}
     {{with .Plan}}
     <p class="plan-line">
       <b>{{.ID}}</b>{{if .LegallyBinding}} · {{slice .LegallyBinding 0 4}}{{end}}
-      {{if .URL}} · <a href="{{.URL}}" target="_blank" rel="noopener">Plan ↗</a>{{end}}
-      {{if and $.Index $.Index.Sample}}<span class="chip draft" title="Fictional sample plans. Add Lantmäteriet credentials for real ones (see README).">sample</span>{{end}}
+      {{if .URL}} · <a href="{{.URL}}" target="_blank" rel="noopener">{{t "Plan"}} ↗</a>{{end}}
+      {{if and $.Index $.Index.Sample}}<span class="chip draft" title="{{t "Fictional sample plans. Add Lantmäteriet credentials for real ones (see README)."}}">{{t "sample"}}</span>{{end}}
     </p>
-    {{if .PDFOnly}}<p class="note warn small">Scanned plan only: check it by hand.</p>{{end}}
+    {{if .PDFOnly}}<p class="note warn small">{{t "Scanned plan only: check it by hand."}}</p>{{end}}
     {{end}}
     {{if .ByDate}}<p class="muted small">{{.ByDate}}</p>{{end}}
     {{if .Regs}}
@@ -60,106 +55,106 @@
     </ul>
     {{end}}
   {{end}}
-  {{if not .B}}<p class="actions"><button class="primary" data-action="import">Import design</button> <button data-action="sample">Try sample</button></p>{{end}}
+  {{if not .B}}<p class="actions"><button class="primary" data-action="import">{{t "Import design"}}</button> <button data-action="sample">{{t "Try sample"}}</button></p>{{end}}
 {{end}}
 {{end}}
 
 {{define "model"}}
 {{if not .B}}
   <div class="empty">
-    <p><b>No model yet</b></p>
-    <p class="muted small">IFC from Revit, ArchiCAD or SketchUp (with rooms), or a Rhino .3dm.</p>
-    <p class="actions"><button class="primary" data-action="import">Import design</button> <button data-action="sample">Try sample</button></p>
+    <p><b>{{t "No model yet"}}</b></p>
+    <p class="muted small">{{t "IFC from Revit, ArchiCAD or SketchUp (with rooms), or a Rhino .3dm."}}</p>
+    <p class="actions"><button class="primary" data-action="import">{{t "Import design"}}</button> <button data-action="sample">{{t "Try sample"}}</button></p>
   </div>
 {{else}}
   <h2>{{.B.FileName}}</h2>
   <div class="stats">
-    <div><b>{{.B.Storeys}}</b><span>storeys</span></div>
-    <div><b>{{num .B.RidgeHeight}} m</b><span>height</span></div>
-    <div><b>{{printf "%.0f" .FootArea}} m²</b><span>footprint</span></div>
+    <div><b>{{.B.Storeys}}</b><span>{{t "storeys"}}</span></div>
+    <div><b>{{num .B.RidgeHeight}} m</b><span>{{t "height"}}</span></div>
+    <div><b>{{printf "%.0f" .FootArea}} m²</b><span>{{t "footprint"}}</span></div>
   </div>
 
   <div class="placement">
     {{if .Place}}
-      <label class="field">Rotation <output>{{printf "%.0f" .Place.RotationDeg}}°</output>
+      <label class="field">{{t "Rotation"}} <output>{{printf "%.0f" .Place.RotationDeg}}°</output>
         <input type="range" min="-180" max="180" step="1" value="{{printf "%.0f" .Place.RotationDeg}}" data-action="rotate" data-live>
       </label>
-      {{if .Pin}}<button data-action="reset-placement" title="Put the building back on the pin, unrotated">Reset to pin</button>{{end}}
+      {{if .Pin}}<button data-action="reset-placement" title="{{t "Put the building back on the pin, unrotated"}}">{{t "Reset to pin"}}</button>{{end}}
     {{else}}
-      <p class="muted small">Pick a site on the map to place it.</p>
+      <p class="muted small">{{t "Pick a site on the map to place it."}}</p>
     {{end}}
   </div>
 
-  <details class="card" {{if .NeedsInfo}}open{{end}}><summary><h3>Project details{{if .NeedsInfo}} <span class="chip draft">needed</span>{{end}}</h3></summary>
-    <label class="field">Building type
+  <details class="card" {{if .NeedsInfo}}open{{end}}><summary><h3>{{t "Project details"}}{{if .NeedsInfo}} <span class="chip draft">{{t "needed"}}</span>{{end}}</h3></summary>
+    <label class="field">{{t "Building type"}}
       <select data-action="use">{{range .Uses}}<option value="{{index . 0}}" {{if eq (index . 0) $.P.Use}}selected{{end}}>{{index . 1}}</option>{{end}}</select>
     </label>
     <div class="grid2">
-      <label class="field">Apartments<input inputmode="decimal" data-action="apartments" value="{{num .P.Apartments}}"></label>
-      <label class="field">Bike spaces<input inputmode="decimal" data-action="bikeParking" value="{{num .P.BikeParking}}"></label>
-      <label class="field">Car spaces<input inputmode="decimal" data-action="carParking" value="{{num .P.CarParking}}"></label>
-      <label class="field">EV chargers<input inputmode="decimal" data-action="chargingPoints" value="{{num .P.ChargingPoints}}"></label>
-      <label class="field">Lifts<input inputmode="decimal" data-action="elevators" placeholder="{{.B.Elevators}} in model" value="{{num .P.Elevators}}"></label>
-      <label class="field" title="Height above sea level, RH 2000. Needed for plan heights given över nollplanet.">Ground level (m a.s.l.)<input inputmode="decimal" data-action="baseElevation" value="{{num .P.BaseElevation}}"></label>
+      <label class="field">{{t "Apartments"}}<input inputmode="decimal" data-action="apartments" value="{{num .P.Apartments}}"></label>
+      <label class="field">{{t "Bike spaces"}}<input inputmode="decimal" data-action="bikeParking" value="{{num .P.BikeParking}}"></label>
+      <label class="field">{{t "Car spaces"}}<input inputmode="decimal" data-action="carParking" value="{{num .P.CarParking}}"></label>
+      <label class="field">{{t "EV chargers"}}<input inputmode="decimal" data-action="chargingPoints" value="{{num .P.ChargingPoints}}"></label>
+      <label class="field">{{t "Lifts"}}<input inputmode="decimal" data-action="elevators" placeholder="{{tf "%d in model" .B.Elevators}}" value="{{num .P.Elevators}}"></label>
+      <label class="field" title="{{t "Height above sea level, RH 2000. Needed for plan heights given över nollplanet."}}">{{t "Ground level (m a.s.l.)"}}<input inputmode="decimal" data-action="baseElevation" value="{{num .P.BaseElevation}}"></label>
     </div>
   </details>
 
   {{if .B.Layers}}
-  <details class="card" open><summary><h3>Layers</h3></summary>
+  <details class="card" open><summary><h3>{{t "Layers"}}</h3></summary>
     <table class="tbl">{{range .B.Layers}}<tr><td>{{.}}</td><td>
       <select data-action="layer" data-id="{{.}}">{{$cur := index $.LayerKinds .}}
-        <option value="" {{if eq $cur ""}}selected{{end}}>(guess)</option>
-        <option value="other" {{if eq $cur "other"}}selected{{end}}>building part</option>
-        <option value="space" {{if eq $cur "space"}}selected{{end}}>rooms</option>
-        <option value="window" {{if eq $cur "window"}}selected{{end}}>windows</option>
-        <option value="door" {{if eq $cur "door"}}selected{{end}}>doors</option>
-        <option value="roof" {{if eq $cur "roof"}}selected{{end}}>roof</option>
-        <option value="site" {{if eq $cur "site"}}selected{{end}}>ignore</option>
+        <option value="" {{if eq $cur ""}}selected{{end}}>{{t "(guess)"}}</option>
+        <option value="other" {{if eq $cur "other"}}selected{{end}}>{{t "building part"}}</option>
+        <option value="space" {{if eq $cur "space"}}selected{{end}}>{{t "rooms"}}</option>
+        <option value="window" {{if eq $cur "window"}}selected{{end}}>{{t "windows"}}</option>
+        <option value="door" {{if eq $cur "door"}}selected{{end}}>{{t "doors"}}</option>
+        <option value="roof" {{if eq $cur "roof"}}selected{{end}}>{{t "roof"}}</option>
+        <option value="site" {{if eq $cur "site"}}selected{{end}}>{{t "ignore"}}</option>
       </select></td></tr>{{end}}</table>
   </details>
   {{end}}
 
   {{if .B.Rooms}}
-  <details class="card"><summary><h3>Rooms <span class="muted">{{len .B.Rooms}}</span></h3></summary>
-    <table class="tbl"><tr><th>Name</th><th>Type</th><th>m²</th><th>Ceiling</th></tr>
+  <details class="card"><summary><h3>{{t "Rooms"}} <span class="muted">{{len .B.Rooms}}</span></h3></summary>
+    <table class="tbl"><tr><th>{{t "Name"}}</th><th>{{t "Type"}}</th><th>m²</th><th>{{t "Ceiling"}}</th></tr>
     {{range .B.Rooms}}<tr><td>{{index . "name"}}</td><td>
-      <select data-action="room-type" data-id="{{index . "id"}}">{{$t := str (index . "type")}}{{range $.RoomTypes}}<option {{if eq . $t}}selected{{end}}>{{.}}</option>{{end}}</select>
+      <select data-action="room-type" data-id="{{index . "id"}}">{{$t := str (index . "type")}}{{range $.RoomTypes}}<option value="{{.}}" {{if eq . $t}}selected{{end}}>{{t .}}</option>{{end}}</select>
     </td><td>{{num (index . "area")}}</td><td>{{num (index . "ceilingHeight")}}</td></tr>{{end}}
     </table>
   </details>
   {{end}}
   {{if .B.Windows}}
-  <details class="card"><summary><h3>Windows <span class="muted">{{len .B.Windows}}</span></h3></summary>
-    <table class="tbl"><tr><th>Name</th><th>W × H</th><th>Sill</th><th title="Fönster för utrymning">Escape</th></tr>
+  <details class="card"><summary><h3>{{t "Windows"}} <span class="muted">{{len .B.Windows}}</span></h3></summary>
+    <table class="tbl"><tr><th>{{t "Name"}}</th><th>{{t "W × H"}}</th><th>{{t "Sill"}}</th><th title="Fönster för utrymning">{{t "Escape"}}</th></tr>
     {{range .B.Windows}}<tr><td>{{index . "name"}}</td><td>{{num (index . "width")}} × {{num (index . "height")}}</td><td>{{num (index . "sillHeight")}}</td>
       <td><input type="checkbox" data-action="escape" data-id="{{index . "id"}}" {{if isTrue (index . "escape")}}checked{{end}}></td></tr>{{end}}
     </table>
   </details>
   {{end}}
   {{if .B.Doors}}
-  <details class="card"><summary><h3>Doors <span class="muted">{{len .B.Doors}}</span></h3></summary>
-    <table class="tbl"><tr><th>Name</th><th>W × H</th><th>External</th></tr>
+  <details class="card"><summary><h3>{{t "Doors"}} <span class="muted">{{len .B.Doors}}</span></h3></summary>
+    <table class="tbl"><tr><th>{{t "Name"}}</th><th>{{t "W × H"}}</th><th>{{t "External"}}</th></tr>
     {{range .B.Doors}}<tr><td>{{index . "name"}}</td><td>{{num (index . "width")}} × {{num (index . "height")}}</td>
       <td><input type="checkbox" data-action="external" data-id="{{index . "id"}}" {{if isTrue (index . "isExternal")}}checked{{end}}></td></tr>{{end}}
     </table>
   </details>
   {{end}}
   {{if .B.Warnings}}
-  <details class="card"><summary><h3>Import notes <span class="muted">{{len .B.Warnings}}</span></h3></summary>
-    {{range .B.Warnings}}<p class="small">{{.}}</p>{{end}}
+  <details class="card"><summary><h3>{{t "Import notes"}} <span class="muted">{{len .B.Warnings}}</span></h3></summary>
+    {{range .B.Warnings}}<p class="small">{{t .}}</p>{{end}}
   </details>
   {{end}}
-  <p class="actions"><button data-action="import">Replace model</button> <button data-action="clear-model">Remove</button></p>
+  <p class="actions"><button data-action="import">{{t "Replace model"}}</button> <button data-action="clear-model">{{t "Remove"}}</button></p>
 {{end}}
 {{end}}
 
 {{define "results"}}
 {{if not .Out}}
-  <div class="empty"><p><b>Nothing checked yet</b></p><p class="muted small">Import a model to see what fails.</p>
-  <p class="actions"><button class="primary" data-action="import">Import design</button> <button data-action="sample">Try sample</button></p></div>
+  <div class="empty"><p><b>{{t "Nothing checked yet"}}</b></p><p class="muted small">{{t "Import a model to see what fails."}}</p>
+  <p class="actions"><button class="primary" data-action="import">{{t "Import design"}}</button> <button data-action="sample">{{t "Try sample"}}</button></p></div>
 {{else}}
-  <h2 class="verdict {{if gt .FailCount 0}}bad{{else}}good{{end}}">{{if gt .FailCount 0}}{{.FailCount}} to fix{{else}}Nothing fails{{end}}</h2>
-  {{if not .Pin}}<p class="muted small">Pick a site to check the detaljplan too.</p>{{end}}
+  <h2 class="verdict {{if gt .FailCount 0}}bad{{else}}good{{end}}">{{if gt .FailCount 0}}{{tf "%d to fix" .FailCount}}{{else}}{{t "Nothing fails"}}{{end}}</h2>
+  {{if not .Pin}}<p class="muted small">{{t "Pick a site to check the detaljplan too."}}</p>{{end}}
   {{range .Sections}}{{if .Issues}}
     {{if .Open}}
       <section class="sec sec-{{.Status}}">
@@ -173,14 +168,14 @@
       </details>
     {{end}}
   {{end}}{{end}}
-  <p class="disclaimer">Learning tool, not an official review.</p>
+  <p class="disclaimer">{{t "Learning tool, not an official review."}}</p>
 {{end}}
 {{end}}
 
 {{define "issue"}}
 <li class="issue st-{{.Status}}{{if .Selected}} open{{end}}">
   <button class="row" data-action="select" data-value="{{.I}}" aria-expanded="{{.Selected}}">
-    <span class="t">{{.Title}}{{if gt .Count 1}} <span class="muted">×{{.Count}}</span>{{end}}{{if .R.Draft}} <span class="chip draft">draft</span>{{end}}</span>
+    <span class="t">{{.Title}}{{if gt .Count 1}} <span class="muted">×{{.Count}}</span>{{end}}{{if .R.Draft}} <span class="chip draft">{{t "draft"}}</span>{{end}}</span>
     {{if .Metric}}<span class="m">{{.Metric}}</span>{{end}}
     <span class="tag">{{.Tag}}</span>
   </button>
@@ -189,7 +184,7 @@
     <p class="why">{{(index .Members 0).Message}}</p>
     {{if .List}}<ul class="members">{{range .Members}}{{if .Metric}}<li><span>{{.Name}}</span> <span class="muted">{{.Metric}}</span></li>{{end}}{{end}}</ul>{{end}}
     {{if or .R.Text .R.Source.Title}}
-    <details class="law"><summary>Regulation text</summary>
+    <details class="law"><summary>{{t "Regulation text"}}</summary>
       {{if .R.Text}}<blockquote>{{.R.Text}}</blockquote>{{end}}
       <p class="small">{{if .R.Source.URL}}<a href="{{.R.Source.URL}}" target="_blank" rel="noopener">{{.R.Source.Title}} ↗</a>{{else}}{{.R.Source.Title}}{{end}}{{if .R.Source.Section}}, {{.R.Source.Section}}{{end}}</p>
     </details>

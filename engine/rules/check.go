@@ -1,14 +1,25 @@
 package rules
 
 import (
+	"sync"
+
 	"encoding/json"
 	"fmt"
+	"github.com/martin/archreg/engine/i18n"
 	"sort"
 )
 
 // Check runs every check and returns the results, sorted so that failures
 // come first within each group.
 func Check(in Input, rs *RuleSet) Output {
+	// Messages are built deep in the checks; the language is set for the
+	// duration of one Check (see tr).
+	checkMu.Lock()
+	defer checkMu.Unlock()
+	lang = i18n.Parse(in.Lang)
+	if rs != nil && lang == i18n.SV {
+		rs = rs.localized()
+	}
 	out := Output{Engine: Version, Ruleset: in.Ruleset, Results: []Result{}}
 	if in.Plan != nil {
 		out.Results = append(out.Results, checkPlan(&in.Model, in.Plan)...)
@@ -107,4 +118,39 @@ func Validate(rs *RuleSet) error {
 		}
 	}
 	return nil
+}
+
+var (
+	checkMu sync.Mutex
+	lang    = i18n.EN
+)
+
+// tr and trf translate engine messages into the language of the running Check.
+func tr(s string) string                 { return lang.T(s) }
+func trf(format string, a ...any) string { return lang.F(format, a...) }
+func noun(n string, count int) string    { return lang.Noun(n, count) }
+
+// localized returns the rule set with titles and messages in Swedish where
+// a rule has them ("sv": {...} in the JSON).
+func (rs *RuleSet) localized() *RuleSet {
+	c := *rs
+	c.Rules = make([]Rule, len(rs.Rules))
+	for i, r := range rs.Rules {
+		if r.SV != nil {
+			if r.SV.Title != "" {
+				r.Title = r.SV.Title
+			}
+			if r.SV.Short != "" {
+				r.Short = r.SV.Short
+			}
+			if r.SV.Manual != "" {
+				r.Manual = r.SV.Manual
+			}
+			if r.SV.FailHint != "" {
+				r.FailHint = r.SV.FailHint
+			}
+		}
+		c.Rules[i] = r
+	}
+	return &c
 }

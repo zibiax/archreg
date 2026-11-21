@@ -24,15 +24,19 @@
 <body>
   <header class="top">
     <div class="brand">
-      <span class="welcome">Welcome to</span>
+      <span class="welcome" data-i18n="welcome">Welcome to</span>
       <span class="name">[App name]</span>
     </div>
     <form id="search" class="search" role="search">
-      <input name="q" type="search" placeholder="Search address, place or coordinates" aria-label="Search address, place or coordinates"
+      <input name="q" type="search" placeholder="Search address, place or coordinates" aria-label="Search address, place or coordinates" data-i18n-placeholder="search" data-i18n-aria="search"
         autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggest">
       <ul id="suggest" class="suggest" role="listbox" aria-label="Suggestions" hidden></ul>
     </form>
-    <button id="import" class="dark">Import design</button>
+    <div class="langs" role="group" aria-label="Language">
+      <button data-lang="sv" aria-pressed="false" title="Svenska">SV</button>
+      <button data-lang="en" aria-pressed="false" title="English">EN</button>
+    </div>
+    <button id="import" class="dark" data-i18n="import">Import design</button>
     <input id="file" type="file" accept=".ifc,.3dm" hidden>
   </header>
 
@@ -40,11 +44,16 @@
     <aside class="side">
       <!-- Go renders the menu rail and the pane into #panel (display: contents). -->
       <div id="panel" class="side-grid"></div>
-      <div id="askpane" class="askpane" hidden>
-        <div id="chat" class="chat" aria-live="polite"></div>
+      <div id="askpane" class="askpane">
+        <div id="chatbox" class="chatbox" hidden>
+          <button type="button" id="chat-fold" class="chat-fold" aria-label="Hide answers" title="Hide answers" data-i18n-aria="hideAnswers" data-i18n-title="hideAnswers">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="chat" class="chat" aria-live="polite"></div>
+        </div>
         <form id="ask" class="ask">
-          <input name="q" placeholder="Why does my window fail?" autocomplete="off" aria-label="Ask a question">
-          <button type="submit" class="round" aria-label="Send">
+          <input name="q" placeholder="Ask, e.g. why does my window fail? What is e1?" autocomplete="off" aria-label="Ask a question" data-i18n-placeholder="askPlaceholder" data-i18n-aria="ask">
+          <button type="submit" class="round" aria-label="Send" data-i18n-aria="send">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
           </button>
         </form>
@@ -53,14 +62,14 @@
 
     <section class="stage" aria-label="Map and 3D view">
       <div class="seg" role="group" aria-label="View">
-        <button data-view="map" aria-pressed="true">Map</button>
-        <button data-view="map3d" aria-pressed="false" title="Tilted map with surrounding buildings, the plan's height limits and your model">3D map</button>
-        <button data-view="3d" aria-pressed="false" title="Look at the model on its own">Model</button>
+        <button data-view="map" aria-pressed="true" data-i18n="map">Map</button>
+        <button data-view="map3d" aria-pressed="false" title="Tilted map with surrounding buildings, the plan's height limits and your model" data-i18n="map3d" data-i18n-title="map3dTitle">3D map</button>
+        <button data-view="3d" aria-pressed="false" title="Look at the model on its own" data-i18n="model" data-i18n-title="modelTitle">Model</button>
       </div>
       <div id="map"></div>
       <div id="map-legend" class="map-legend" hidden>
-        <span><i class="sw env"></i>Plan height limit</span>
-        <span><i class="sw osm"></i>Existing buildings</span>
+        <span><i class="sw env"></i><span data-i18n="envLegend">Plan height limit</span></span>
+        <span><i class="sw osm"></i><span data-i18n="osmLegend">Existing buildings</span></span>
         <p id="map-note" class="small" hidden></p>
       </div>
       <div id="viewer" hidden></div>

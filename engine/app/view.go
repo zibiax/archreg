@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"github.com/martin/archreg/engine/i18n"
 	"html/template"
 	"math"
 	"strings"
@@ -23,6 +24,7 @@ type View struct {
 	Model *Model3D `json:"model,omitempty"`
 	Focus string   `json:"focus,omitempty"` // "map" or "3d"
 	Error string   `json:"error,omitempty"`
+	Lang  string   `json:"lang"` // "en" or "sv"
 }
 
 // MapView holds GeoJSON for the map layers.
@@ -78,7 +80,7 @@ func fc(features []map[string]any) map[string]any {
 
 // view renders the current state. Caller holds the lock.
 func (a *App) view() *View {
-	v := &View{Tab: a.Tab, Error: a.lastError}
+	v := &View{Tab: a.Tab, Error: a.lastError, Lang: string(a.Lang)}
 
 	// Map.
 	if a.Pin != nil {
@@ -107,7 +109,7 @@ func (a *App) view() *View {
 			if r.Geometry == nil {
 				continue
 			}
-			kind, _ := rules.Describe(r)
+			kind, _ := rules.Describe(r, a.Lang)
 			rf = append(rf, map[string]any{"type": "Feature", "geometry": plans.ToWGS84(r.Geometry),
 				"properties": map[string]any{"id": r.ID, "kind": kind, "label": r.Label}})
 		}
@@ -134,7 +136,7 @@ func (a *App) view() *View {
 	// Height limits as volumes, and where the model sits.
 	var ef []map[string]any
 	if sel != nil {
-		parts, notes := rules.Envelope(sel, a.Project.BaseElevation)
+		parts, notes := rules.Envelope(sel, a.Project.BaseElevation, a.Lang)
 		for _, p := range parts {
 			var mp [][][][2]float64
 			for _, poly := range p.Polygons {
@@ -186,6 +188,10 @@ func (a *App) view() *View {
 	v.Focus, a.focus = a.focus, ""
 
 	var buf bytes.Buffer
+	tmpl, ok := tmpls[a.Lang]
+	if !ok {
+		a.Lang, tmpl = i18n.EN, tmpls[i18n.EN]
+	}
 	if err := tmpl.ExecuteTemplate(&buf, "panel", a.panelData()); err != nil {
 		v.Panel = "<p class=error>Template error: " + template.HTMLEscapeString(err.Error()) + "</p>"
 	} else {
@@ -274,15 +280,15 @@ type panelData struct {
 func (a *App) panelData() panelData {
 	d := panelData{Tab: a.Tab, Index: a.index, IdxErr: a.idxErr, Pin: a.Pin, Plans: a.Plans, PlanIdx: a.PlanIdx,
 		B: a.Building, Place: a.Placement, P: a.Project, Out: a.Output, RoomTypes: ingest.RoomTypes, LayerKinds: a.layerKinds,
-		Uses: [][2]string{{"house", "One- or two-family house (en-/tvåbostadshus)"}, {"apartments", "Apartment building (flerbostadshus)"}, {"nonResidential", "Non-residential (lokalbyggnad)"}}}
+		Uses: [][2]string{{"house", a.Lang.T("One- or two-family house (en-/tvåbostadshus)")}, {"apartments", a.Lang.T("Apartment building (flerbostadshus)")}, {"nonResidential", a.Lang.T("Non-residential (lokalbyggnad)")}}}
 	if p := a.plan(); p != nil {
 		d.Plan = p
 		for _, r := range p.Regulations {
-			kind, plain := rules.Describe(r)
-			d.Regs = append(d.Regs, regRow{Label: r.Label, Plain: plain, Short: rules.Short(r), Text: r.Text, Kind: kind})
+			kind, plain := rules.Describe(r, a.Lang)
+			d.Regs = append(d.Regs, regRow{Label: r.Label, Plain: plain, Short: rules.Short(r, a.Lang), Text: r.Text, Kind: kind})
 		}
 		if p.LegallyBinding != "" && p.LegallyBinding < "2011-05-02" {
-			d.ByDate = "Pre-2011 plan: older height definitions (ÄPBL) apply."
+			d.ByDate = a.Lang.T("Pre-2011 plan: older height definitions (ÄPBL) apply.")
 		}
 	}
 	if a.Building != nil {
@@ -328,28 +334,37 @@ func (a *App) elementNames() map[string]string {
 //go:embed templates/*.tmpl
 var tmplFS embed.FS
 
-var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
-	"statusText": func(s rules.Status) string {
-		return map[rules.Status]string{rules.Pass: "Pass", rules.Fail: "Fail", rules.Manual: "Check manually", rules.Missing: "Missing data"}[s]
-	},
-	"num": func(v any) string {
-		switch x := v.(type) {
-		case float64:
-			return strings.TrimSuffix(strings.TrimRight(fmt.Sprintf("%.2f", x), "0"), ".")
-		case *float64:
-			if x == nil {
-				return ""
-			}
-			return strings.TrimSuffix(strings.TrimRight(fmt.Sprintf("%.2f", *x), "0"), ".")
-		case int:
-			return fmt.Sprint(x)
-		case nil:
-			return "–"
+// One template set per language; the "t" function translates a label.
+var tmpls = map[i18n.Lang]*template.Template{i18n.EN: newTemplates(i18n.EN), i18n.SV: newTemplates(i18n.SV)}
+
+func newTemplates(l i18n.Lang) *template.Template {
+	return template.Must(template.New("").Funcs(template.FuncMap{
+		"t":    l.T,
+		"tf":   l.F,
+		"lang": func() string { return string(l) },
+
+		"num":    func(v any) string { return l.Dec(num(v)) },
+		"str":    func(v any) string { s, _ := v.(string); return s },
+		"isTrue": func(v any) bool { b, _ := v.(bool); return b },
+		"eq2":    func(a, b string) bool { return a == b },
+		"count":  func(m map[rules.Status]int, s string) int { return m[rules.Status(s)] },
+	}).ParseFS(tmplFS, "templates/*.tmpl"))
+}
+
+// num formats a number briefly: 9.4, 12, – for missing.
+func num(v any) string {
+	switch x := v.(type) {
+	case float64:
+		return strings.TrimSuffix(strings.TrimRight(fmt.Sprintf("%.2f", x), "0"), ".")
+	case *float64:
+		if x == nil {
+			return ""
 		}
-		return fmt.Sprint(v)
-	},
-	"str":    func(v any) string { s, _ := v.(string); return s },
-	"isTrue": func(v any) bool { b, _ := v.(bool); return b },
-	"eq2":    func(a, b string) bool { return a == b },
-	"count":  func(m map[rules.Status]int, s string) int { return m[rules.Status(s)] },
-}).ParseFS(tmplFS, "templates/*.tmpl"))
+		return strings.TrimSuffix(strings.TrimRight(fmt.Sprintf("%.2f", *x), "0"), ".")
+	case int:
+		return fmt.Sprint(x)
+	case nil:
+		return "–"
+	}
+	return fmt.Sprint(v)
+}

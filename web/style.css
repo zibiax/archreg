@@ -57,6 +57,9 @@ code { font-size: 12px; background: var(--field); padding: 1px 4px; border-radiu
 .suggest li[aria-selected="true"] { background: var(--field); }
 .suggest li.none { cursor: default; color: var(--muted); }
 .dark { white-space: nowrap; }
+.langs { display: flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.langs button { border: 0; border-radius: 0; padding: 6px 9px; background: var(--card); font-size: 12px; font-weight: 600; color: var(--muted); }
+.langs button[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
 
 /* Left: menu rail + one pane. Right: the map, which gets the rest. */
 .layout { flex: 1; display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 16px; padding: 0 20px 20px; min-height: 0; }
@@ -80,7 +83,8 @@ code { font-size: 12px; background: var(--field); padding: 1px 4px; border-radiu
 .loading { position: absolute; inset: 0; display: grid; place-items: center; background: #fff8; z-index: 10; font-weight: 600; }
 .loading[hidden] { display: none; }
 
-.side { background: var(--panel); border-radius: 18px; display: grid; grid-template-columns: 68px minmax(0, 1fr); min-height: 0; overflow: hidden; }
+.side { background: var(--panel); border-radius: 18px; display: grid; grid-template-columns: 68px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto; min-height: 0; overflow: hidden; }
 .side-grid { display: contents; }
 .rail { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 4px; padding: 10px 6px; border-right: 1px solid var(--line); }
 .rail button { position: relative; border: 0; background: none; border-radius: 12px; padding: 8px 0 6px; display: flex; flex-direction: column;
@@ -90,9 +94,10 @@ code { font-size: 12px; background: var(--field); padding: 1px 4px; border-radiu
 .rail svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
 .rail .badge { position: absolute; top: 3px; right: 10px; }
 .pane { grid-column: 2; grid-row: 1; overflow: auto; min-height: 0; padding: 14px 16px; }
-.pane.pane-ask { overflow: visible; padding-bottom: 0; }
-.askpane { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; min-height: 0; padding: 86px 16px 14px; }
-.askpane[hidden] { display: none; }
+.askpane { grid-column: 1 / -1; grid-row: 2; border-top: 1px solid var(--line); padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+.chatbox { position: relative; max-height: 38vh; display: flex; flex-direction: column; }
+.chatbox[hidden] { display: none; }
+.chat-fold { position: absolute; top: 0; right: 0; z-index: 1; width: 26px; height: 26px; padding: 0; display: grid; place-items: center; border-radius: 8px; }
 .badge { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--field); font-size: 11px; text-align: center; font-weight: 700; }
 .badge.bad { background: var(--fail); color: #fff; }
 .badge.ok { background: var(--pass); color: #fff; }
@@ -181,11 +186,11 @@ details.sec[open] summary h3::after { content: "▾"; }
 .disclaimer { font-size: 11px; color: var(--muted); margin-top: 18px; }
 blockquote { margin: 6px 0; padding: 6px 10px; border-left: 3px solid var(--tan); background: var(--panel); font-size: 12px; font-style: italic; }
 
-.chat { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 6px; padding: 8px 0; }
+.chat { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 6px; padding: 2px 30px 2px 0; }
 .msg { padding: 6px 10px; border-radius: 12px; max-width: 90%; font-size: 13px; }
 .msg.app { background: var(--card); align-self: flex-start; }
 .msg.user { background: var(--field); align-self: flex-end; }
-.ask { display: flex; gap: 8px; align-items: center; padding-top: 8px; }
+.ask { display: flex; gap: 8px; align-items: center; }
 .ask input { flex: 1; padding: 9px 12px; border-radius: 10px; border: 0; background: var(--field); }
 .round { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; padding: 0; background: var(--field); border: 0; }
 
@@ -197,9 +202,9 @@ blockquote { margin: 6px 0; padding: 6px 10px; border-left: 3px solid var(--tan)
   /* Phone: map on top, the menu becomes a tab bar above the pane. */
   .layout { grid-template-columns: 1fr; padding: 0 16px 16px; }
   .stage { order: -1; min-height: 50vh; }
-  .side { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); min-height: 60vh; }
+  .side { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 60vh; }
   .rail { grid-row: 1; grid-column: 1; flex-direction: row; justify-content: space-around; border-right: 0; border-bottom: 1px solid var(--line); padding: 6px; }
   .rail button { flex: 1; }
-  .pane, .askpane { grid-row: 2; grid-column: 1; }
-  .askpane { padding-top: 70px; }
+  .pane { grid-row: 2; grid-column: 1; }
+  .askpane { grid-row: 3; position: sticky; bottom: 0; background: var(--panel); }
 }

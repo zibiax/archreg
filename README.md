@@ -115,6 +115,8 @@ Placing the building on the plan:
 
 - The model's outline appears at the pin. **Drag it** to move it and **drag the round handle** next to it to rotate it; every move re-runs the checks.
 - Search for or click another site (more than 150 m away) and the building moves there, keeping its rotation. **Reset to pin** (Model) puts it back on the pin, unrotated.
+- **Language:** Swedish or English (the SV | EN switch in the header; defaults to the browser's language). The app's own text is translated in Go (`engine/i18n`, a Swedish catalogue keyed by the English text; a test checks every string has a translation); building rules carry their Swedish titles in `"sv"` in the rule JSON. Regulation quotes are always the original Swedish.
+- **Ask** is always at the bottom of the left side; answers appear above it and can be folded away.
 - **Issues** lists one row per rule, worst first: *Must fix* and *Missing info* open, *Check by hand* and *Passed* folded. Each row is a short name and the one figure that matters (“1.1 m · needs ≥ 1.5 m”); the full explanation and the regulation text open on click.
 - The outline is **green** when it stands clear (inside the plan, off prickmark and korsmark), **red** when it stands on prickmark or breaks a placement rule, and **orange** when that can't be decided.
 - **3D map** tilts the map and shows existing buildings with OpenStreetMap heights, your model in its real position, and the selected plan's height limits as see-through blue volumes (the plan area minus prickmark/korsmark, raised to the limit). A design that's too tall pokes through. OSM buildings under your model are flattened, since the design replaces them. Heights given "över nollplanet" need the ground level (RH 2000) in the Model tab.
