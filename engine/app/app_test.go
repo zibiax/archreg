@@ -2,6 +2,7 @@ package app
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -127,3 +128,36 @@ func TestFlow(t *testing.T) {
 }
 
 func itoa(i int) string { b, _ := json.Marshal(i); return string(b) }
+
+func TestPlacementOnMap(t *testing.T) {
+	a := newTestApp(t)
+	a.Init()
+	a.DropPin(18.0835, 59.3468) // centre of EXEMPEL-2023/01
+	raw, pos := ingest.Sample()
+	rj, _ := json.Marshal(raw)
+	v := a.LoadModel(rj, pos)
+
+	// The 3D map gets the plan's height limit and where the model stands.
+	env := v.Map.Envelope["features"].([]map[string]any)
+	if len(env) != 1 || env[0]["properties"].(map[string]any)["height"] != 16.0 {
+		t.Fatalf("envelope: %v", env)
+	}
+	p := v.Map.Place
+	if p == nil || p.Scale != 1 || p.Radius < 13 || p.Radius > 14 {
+		t.Fatalf("place: %+v", p)
+	}
+	if d := math.Hypot(p.Origin[0]-18.0835, p.Origin[1]-59.3468); d > 1e-6 {
+		t.Errorf("model not centred on the pin: %v", p.Origin)
+	}
+	state := func(v *View) string {
+		return v.Map.Footprint["features"].([]map[string]any)[0]["properties"].(map[string]any)["state"].(string)
+	}
+	if s := state(v); s != "ok" {
+		t.Errorf("clear site: state %q", s)
+	}
+	// Onto the prickmark strip along the south edge (55 m south).
+	v = a.MoveModel(18.0835, 59.3468-55/111320.0)
+	if s := state(v); s != "conflict" {
+		t.Errorf("on prickmark: state %q", s)
+	}
+}

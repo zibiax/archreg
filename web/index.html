@@ -40,9 +40,15 @@
     <section class="stage" aria-label="Map and 3D view">
       <div class="seg" role="group" aria-label="View">
         <button data-view="map" aria-pressed="true">Map</button>
-        <button data-view="3d" aria-pressed="false">3D</button>
+        <button data-view="map3d" aria-pressed="false" title="Tilted map with surrounding buildings, the plan's height limits and your model">3D map</button>
+        <button data-view="3d" aria-pressed="false" title="Look at the model on its own">Model</button>
       </div>
       <div id="map"></div>
+      <div id="map-legend" class="map-legend" hidden>
+        <span><i class="sw env"></i>Plan height limit</span>
+        <span><i class="sw osm"></i>Existing buildings (OpenStreetMap; ones under your model are hidden)</span>
+        <p id="map-note" class="small" hidden></p>
+      </div>
       <div id="viewer" hidden></div>
       <div id="loading" class="loading">Loading…</div>
     </section>

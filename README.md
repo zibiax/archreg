@@ -109,7 +109,13 @@ go run ./cmd/serve                 # builds web/wasm/app.wasm, serves http://loc
 go test ./...                      # engine, geometry, ingest and app tests
 ```
 
-Click the map to drop a pin, then **Try the sample building** (or import an IFC / .3dm). The repo ships **fictional sample plans** (IDs `EXEMPEL-…`) in Östermalm so it works before you have API access.
+Click the map to drop a pin, then **Try the sample building** (or import an IFC / .3dm). The repo ships **10 fictional sample plans** (IDs `EXEMPEL-…`) around Stockholm so it works before you have API access: Östermalm, Gärdet, Södermalm (Hornsgatan), Kungsholmen (Fridhemsplan), Hammarby sjöstad, Vasastan (Odenplan), Liljeholmen, Bromma and Gamla stan. Between them they use every kind of regulation the engine checks: nockhöjd, totalhöjd (also in metres above sea level), byggnadshöjd under the old PBL, byggnadsarea in m² and in %, bruttoarea, storeys, distance to the property boundary, prickmark, korsmark, and a PDF-only plan. Regenerate them with `go run ./cmd/fetch-plans -sample`.
+
+Placing the building on the plan:
+
+- The model's outline appears at the pin. **Drag it** to move it and **drag the round handle** next to it to rotate it; every move re-runs the checks.
+- The outline is **green** when it stands clear (inside the plan, off prickmark and korsmark), **red** when it stands on prickmark or breaks a placement rule, and **orange** when that can't be decided.
+- **3D map** tilts the map and shows existing buildings with OpenStreetMap heights, your model in its real position, and the selected plan's height limits as see-through blue volumes (the plan area minus prickmark/korsmark, raised to the limit). A design that's too tall pokes through. OSM buildings under your model are flattened, since the design replaces them. Heights given "över nollplanet" need the ground level (RH 2000) in the Model tab.
 
 **Real detaljplaner:** put your Lantmäteriet credentials in `.env` and fetch:
 
@@ -172,7 +178,7 @@ flowchart LR
 | App logic + UI rendering | **Go → WASM** (`GOOS=js GOARCH=wasm`), `html/template` | One language for engine, pipeline, server and UI |
 | Glue | One plain ES module (`web/app.js`), no build step | The map/3D/IFC libraries are JavaScript |
 | Map | [MapLibre GL JS](https://maplibre.org/) + [OpenFreeMap](https://openfreemap.org/) grey style | Open source, no key |
-| 3D view | [three.js](https://threejs.org/) | Standard for 3D in the browser |
+| 3D view | [three.js](https://threejs.org/), on its own and drawn into the map as a MapLibre custom layer | Standard for 3D in the browser |
 | IFC reading | `web-ifc` (C++ → WASM) | Fast IFC parsing in the browser |
 | Rhino reading | `rhino3dm.js` (C++ → WASM) | McNeel's official `.3dm` library |
 | Plan data | Static JSON in a 1 km SWEREF grid | The browser loads only the cells it needs; no database |

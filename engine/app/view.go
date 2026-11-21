@@ -32,6 +32,33 @@ type MapView struct {
 	Regs      map[string]any `json:"regs"`
 	Footprint map[string]any `json:"footprint"`
 	FlyTo     []float64      `json:"flyTo,omitempty"`
+	// Envelope: the selected plan's height limits as volumes (GeoJSON with
+	// a "height" property, metres above ground) for the 3D map.
+	Envelope     map[string]any `json:"envelope"`
+	EnvelopeNote string         `json:"envelopeNote,omitempty"`
+	// Place puts the 3D model on the map; nil when it isn't placed.
+	Place *ModelPlace `json:"place,omitempty"`
+}
+
+// ModelPlace maps raw loader positions to the map:
+//
+//	local = scale·raw (y and z swapped first if yUp) − (cx, cy, groundZ)
+//	world = origin + local.x·(east − origin) + local.y·(north − origin) + up
+//
+// origin/east/north are WGS84; the map converts them to its own projection.
+type ModelPlace struct {
+	Origin  [2]float64 `json:"origin"`
+	East    [2]float64 `json:"east"`
+	North   [2]float64 `json:"north"`
+	Scale   float64    `json:"scale"`
+	YUp     bool       `json:"yUp"`
+	CX      float64    `json:"cx"`
+	CY      float64    `json:"cy"`
+	GroundZ float64    `json:"groundZ"`
+	// Rotation in degrees and Radius (metres, centre to farthest corner)
+	// place the rotate handle.
+	Rotation float64 `json:"rotation"`
+	Radius   float64 `json:"radius"`
 }
 
 // Model3D tells the viewer what to show.
@@ -100,9 +127,44 @@ func (a *App) view() *View {
 		}
 		ff = append(ff, map[string]any{"type": "Feature",
 			"geometry":   map[string]any{"type": "Polygon", "coordinates": [][][2]float64{coords}},
-			"properties": map[string]any{"highlight": highlight}})
+			"properties": map[string]any{"highlight": highlight, "state": a.placementState()}})
 	}
 	v.Map.Footprint = fc(ff)
+
+	// Height limits as volumes, and where the model sits.
+	var ef []map[string]any
+	if sel != nil {
+		parts, notes := rules.Envelope(sel, a.Project.BaseElevation)
+		for _, p := range parts {
+			var mp [][][][2]float64
+			for _, poly := range p.Polygons {
+				var rings [][][2]float64
+				for _, ring := range poly {
+					var r [][2]float64
+					for _, q := range ring {
+						lon, lat := geo.ToWGS84(q[0], q[1])
+						r = append(r, [2]float64{lon, lat})
+					}
+					rings = append(rings, r)
+				}
+				mp = append(mp, rings)
+			}
+			ef = append(ef, map[string]any{"type": "Feature",
+				"geometry":   map[string]any{"type": "MultiPolygon", "coordinates": mp},
+				"properties": map[string]any{"height": p.Height, "kind": p.Kind, "label": p.Label}})
+		}
+		v.Map.EnvelopeNote = strings.Join(notes, " ")
+	}
+	v.Map.Envelope = fc(ef)
+	if a.Building != nil && a.Placement != nil && a.raw != nil {
+		o, e, n := a.Building.MapFrame(*a.Placement)
+		v.Map.Place = &ModelPlace{Origin: o, East: e, North: n, Scale: a.raw.EffectiveGeomScale(), YUp: a.raw.YUp,
+			CX: a.Building.Center[0], CY: a.Building.Center[1], GroundZ: a.Building.GroundZ,
+			Rotation: a.Placement.RotationDeg}
+		for _, q := range a.Building.Footprint {
+			v.Map.Place.Radius = math.Max(v.Map.Place.Radius, math.Hypot(q[0]-a.Building.Center[0], q[1]-a.Building.Center[1]))
+		}
+	}
 
 	// 3D.
 	if a.Building != nil || a.newMesh {
@@ -129,6 +191,41 @@ func (a *App) view() *View {
 	tmpl.ExecuteTemplate(&buf, "chat", a.Chat)
 	v.Chat = buf.String()
 	return v
+}
+
+// placementState sums up the checks that depend on where the building
+// stands (inside the plan, prickmark, korsmark, distance to boundary), so
+// the footprint can be coloured while it is dragged: "conflict" if any
+// fails (or the building measurably stands on prickmark), "unsure" if any
+// can't be decided, else "ok".
+func (a *App) placementState() string {
+	if a.Output == nil {
+		return "unsure"
+	}
+	state := "ok"
+	for _, r := range a.Output.Results {
+		switch r.RuleID {
+		case "dp.withinPlan", "dp.prickmark", "dp.korsmark", "dp.avstand":
+		default:
+			continue
+		}
+		// A measured prickmark overlap is shown red even when the result
+		// says "check manually" only because the outline is approximate;
+		// the Results tab explains the uncertainty.
+		if r.RuleID == "dp.prickmark" && r.Measured != nil && *r.Measured > 0 {
+			return "conflict"
+		}
+		switch r.Status {
+		case rules.Fail:
+			return "conflict"
+		case rules.Manual, rules.Missing:
+			state = "unsure"
+		}
+	}
+	if len(a.Plans) == 0 {
+		return "unsure"
+	}
+	return state
 }
 
 func (a *App) selectedResult() *rules.Result {

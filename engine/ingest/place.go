@@ -55,3 +55,26 @@ func (b *Building) Model(p *Placement, building rules.Element, baseElevation *fl
 	}
 	return m
 }
+
+// EffectiveGeomScale is the factor from a loader's raw positions to metres, as
+// Build applies it.
+func (r Raw) EffectiveGeomScale() float64 {
+	if r.Source == "3dm" {
+		return rhinoScale(r.RhinoUnitSystem)
+	}
+	if r.GeomScale == 0 {
+		return 1
+	}
+	return r.GeomScale
+}
+
+// MapFrame says where the building's local metres land on the map: the
+// WGS84 position of its placement centre at ground level, and of points one
+// metre along local +x and +y. Three points are enough for the map to build
+// an affine transform; over a building's size the projection is linear.
+func (b *Building) MapFrame(p Placement) (origin, east, north [2]float64) {
+	pts := geo.Transform([]geo.Pt{{0, 0}, {1, 0}, {0, 1}}, p.RotationDeg, p.E, p.N)
+	ll := func(q geo.Pt) [2]float64 { lon, lat := geo.ToWGS84(q[0], q[1]); return [2]float64{lon, lat} }
+	origin, east, north = ll(pts[0]), ll(pts[1]), ll(pts[2])
+	return
+}
